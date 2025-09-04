@@ -1,4 +1,4 @@
-// A4-PDF (hell), Logo etwas größer, klare Struktur; Bilder & Skizzen inklusive
+// A4-PDF (hell), Logo zuverlässig oben links (dezent), klare Struktur; Bilder & Skizzen inklusive
 async function createPdfAndOpen(data){
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
 
@@ -46,32 +46,40 @@ async function createPdfAndOpen(data){
     y -= h + 2;
   }
 
-  // Header
+  // --- Header: Logo oben links (max 140×40 pt) + Titel + Datum; großzügiger Abstand nach unten
   (function header(){
     const title = 'Aufmaß – DEMO';
     const dateStr = new Date().toLocaleDateString('de-DE');
-    const headH = 62; ensure(headH);
 
-    // Logo etwas größer (maxW 170)
-    let lx = MARGIN;
+    // Logo streng begrenzen
+    let logoW = 0, logoH = 0;
     if (logoImg){
-      const maxW = 170;
-      const w = Math.min(maxW, logoImg.width), h = logoImg.height * (w / logoImg.width);
-      page.drawImage(logoImg, { x:MARGIN, y:y - h + 8, width: w, height: h });
-      lx = MARGIN + w + 12;
+      const maxW = 140, maxH = 40;
+      const scale = Math.min(maxW / logoImg.width, maxH / logoImg.height, 1);
+      logoW = Math.round(logoImg.width * scale);
+      logoH = Math.round(logoImg.height * scale);
+      page.drawImage(logoImg, { x:MARGIN, y: A4.h - MARGIN - logoH, width: logoW, height: logoH });
     }
 
-    text(title, lx, y, { size:16, font: fontB });
-    text(`Datum: ${dateStr}`, lx, y-18, { size:10, font: fontR, color: rgb(0.25,0.3,0.4) });
+    // Titel/Datum rechts vom Logo
+    const textX = MARGIN + (logoW ? (logoW + 12) : 0);
+    const topY = A4.h - MARGIN;
+    text(title, textX, topY - 16, { size:16, font: fontB });
+    text(`Datum: ${dateStr}`, textX, topY - 34, { size:10, font: fontR, color: rgb(0.25,0.3,0.4) });
 
-    y -= headH - 6;
+    // Deutlich mehr Platz unter dem Header reservieren (verhindert jede Überlappung)
+    const reserved = Math.max(logoH + 36, 76);
+    y = A4.h - MARGIN - reserved;
+  })();
 
-    // Auftraggeber (einspaltig) + TESTKUNDE
-    const kd = data.kundendaten || {};
+  // Auftraggeber (einspaltig) + TESTKUNDE
+  (function auftraggeber(){
+    ensure(90);
     text('Auftraggeber', MARGIN, y, { size:11, font:fontB });
     badge(MARGIN+90, y+9, 'TESTKUNDE', { fill: rgb(0.95,0.55,0.18) });
     y -= 16;
 
+    const kd = data.kundendaten || {};
     const l0 = [
       ['Firma', kd.firma || ''],
       ['Name', kd.name || ''],
@@ -81,7 +89,7 @@ async function createPdfAndOpen(data){
       ['E-Mail', kd.email || '']
     ];
     for (const [k,v] of l0){ keyVal(k, v, MARGIN, CONTENT_W); }
-    y -= 8;
+    y -= 6;
   })();
 
   // Auftragsdaten
@@ -166,7 +174,8 @@ async function loadLogoPngBytes(){
     const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
     const img = await loadImage(dataUrl);
     const canvas = document.createElement('canvas');
-    const targetW = 520; // etwas größer gerendert
+    // Render auf definierte Rastergröße; Weiß hinterlegt (dezent)
+    const targetW = 520;
     const scale = targetW / img.width;
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
