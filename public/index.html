@@ -1,0 +1,77 @@
+<!doctype html>
+</select>
+<input type="text" name="farbeSonstige" id="farbeSonstige" placeholder="Farbname" style="display:none; width:auto;" />
+<span id="farbeSwatches" class="swatches" aria-hidden="true"></span>
+</div>
+
+
+<div class="section-divider"></div>
+
+
+<div class="row-inline">
+<label style="flex:none;"><span>Glas:</span></label>
+<label class="inline-radio-item"><input type="radio" name="glas" value="1:1" /> 1:1</label>
+<label class="inline-radio-item"><input type="radio" name="glas" value="3-fach" /> 3-fach</label>
+</div>
+
+
+<div class="section-divider"></div>
+
+
+<div class="row-inline">
+<label style="flex:none;"><span>FBA:</span></label>
+<label class="inline-radio-item"><input type="radio" name="fba" value="Ja" /> Ja</label>
+<label class="inline-radio-item"><input type="radio" name="fba" value="Nein" /> Nein</label>
+</div>
+
+
+<div class="row-inline">
+<button type="button" id="btnBackToKundendaten">Zurück</button>
+<button type="button" id="btnToFensterbereich">Weiter</button>
+</div>
+</fieldset>
+
+
+<!-- Schritt 3: Fensteraufmaß -->
+<fieldset id="fensterbereich" style="display:none;">
+<legend>Fensteraufmaß</legend>
+
+
+<div id="raeumeContainer"></div>
+<button type="button" class="add-btn" id="addRaumBtn">+ Raum hinzufügen</button>
+
+
+<div class="row-inline" style="justify-content:flex-start; margin-top:1.5em;">
+<button type="button" id="btnBackToAuftragsdaten">Zurück</button>
+<button type="submit" id="submitButton">Absenden</button>
+</div>
+
+
+<div id="loadingBar" style="display:none; text-align:center; margin-top:1.5em;">
+⏳ Aufmaßprotokoll wird erstellt …
+</div>
+</fieldset>
+</form>
+
+
+<!-- Abschlussseite -->
+<div id="abschlussSeite" style="display:none; text-align:center; margin-top:2em;">
+<h2>✅ Aufmaß erfolgreich erfasst</h2>
+<p>PDF wird in einem neuen Tab geöffnet (Demo-Modus).</p>
+<img src="https://cdn-icons-png.flaticon.com/512/553/553416.png" width="140" alt="Erfolg" style="margin-top:1em;" />
+<br /><br />
+<button type="button" id="newAufmassBtn">Weiteres Aufmaß erstellen</button>
+</div>
+</div>
+</main>
+
+
+<noscript>
+Bitte JavaScript aktivieren – diese Demo benötigt JS.
+</noscript>
+
+
+<script src="/app.js" defer></script>
+<script src="/pdf.js" defer></script>
+</body>
+</html>
