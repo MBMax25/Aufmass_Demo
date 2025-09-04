@@ -33,7 +33,7 @@
 
       <div class="demo-cta">
         <button id="demoGuideBtn" class="btn btn-ghost" title="Geführte Demo starten">Demo starten</button>
-        <span id="demoHint" class="hint-bubble">👈 Demo ansehen</span>
+        <span id="demoHintInline" class="hint-inline">Tipp: Geführte Demo</span>
       </div>
 
       <button id="printBtn" class="btn btn-primary" title="PDF anzeigen">Drucken/Speichern</button>
@@ -185,13 +185,20 @@
     </div>
   </main>
 
+  <!-- Coachmark (Hinweis auf Drucken) -->
+  <div id="coachPrint" class="coach" hidden>
+    <button type="button" class="coach-close" aria-label="Hinweis schließen">×</button>
+    <div class="coach-title">PDF anzeigen & speichern</div>
+    <div class="coach-body">Klicke auf <strong>„Drucken/Speichern“</strong>, um das professionelle Aufmaß-PDF zu erzeugen.</div>
+  </div>
+
   <!-- Toast -->
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <noscript>Bitte JavaScript aktivieren – diese Demo benötigt JS.</noscript>
 
   <!-- pdf-lib lokal (mit Cache-Bust) -->
-  <script src="vendor/pdf-lib.min.js?v=7"></script>
+  <script src="vendor/pdf-lib.min.js?v=8"></script>
   <script src="app.js" defer></script>
   <script src="pdf.js" defer></script>
 </body>
