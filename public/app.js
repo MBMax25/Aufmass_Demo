@@ -1,4 +1,4 @@
-/* PWA + Formular + Fenster-Editor + Guided Demo + Laser-Simulation */
+/* PWA + Formular + Fenster-Editor + Guided Demo + Laser-Simulation + iPhone-Optimierungen */
 let deferredPrompt = null;
 
 // Service Worker
@@ -23,21 +23,28 @@ document.getElementById('installBtn')?.addEventListener('click', async () => {
   document.getElementById('installBtn').hidden = true;
 });
 
-// Online/Offline Badge
+// Online/Offline Badge + Klick-Toast
 const connectionBadge = document.getElementById('connectionBadge');
 function updateOnlineStatus(){
   const online = navigator.onLine;
   connectionBadge.textContent = online ? 'Online' : 'Offline';
-  connectionBadge.className = 'badge';
+}
+function showToast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(showToast._t); showToast._t = setTimeout(()=>{ el.hidden = true; }, 3000);
 }
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
+connectionBadge?.addEventListener('click', ()=>{
+  showToast('Diese App ist vollständig offline nutzbar. Daten werden automatisch übertragen, sobald wieder Internet besteht.');
+});
 updateOnlineStatus();
 
 // ---------------------------
 // State-Persistenz
 // ---------------------------
-const FORM_KEY = 'aufmass-demo-form-v4';
+const FORM_KEY = 'aufmass-demo-form-v5';
 const MAX_PHOTOS = 3;
 
 function saveState(){
@@ -59,23 +66,21 @@ function loadState(){
       if (el) el.value = v;
     }
     importRooms(obj._rooms || []);
-    // Empfänger Readonly-Preview updaten
-    syncEmpfReadonly();
   } catch(e){ console.warn('loadState failed', e); }
 }
 let saveTimer=null;
 document.getElementById('aufmassForm').addEventListener('input', ()=>{
-  clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ syncEmpfReadonly(); saveState(); }, 250);
+  clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 250);
 });
 
 // Step navigation
 const fsKunde = document.getElementById('kundendaten');
 const fsAuftrag = document.getElementById('auftragsdaten');
 const fsFenster = document.getElementById('fensterbereich');
-document.getElementById('btnToAuftragsdaten')?.addEventListener('click', ()=>{ fsKunde.style.display='none'; fsAuftrag.style.display=''; });
-document.getElementById('btnBackToKundendaten')?.addEventListener('click', ()=>{ fsAuftrag.style.display='none'; fsKunde.style.display=''; });
-document.getElementById('btnToFensterbereich')?.addEventListener('click', ()=>{ fsAuftrag.style.display='none'; fsFenster.style.display=''; });
-document.getElementById('btnBackToAuftragsdaten')?.addEventListener('click', ()=>{ fsFenster.style.display='none'; fsAuftrag.style.display=''; });
+document.getElementById('btnToAuftragsdaten')?.addEventListener('click', ()=>{ fsKunde.style.display='none'; fsAuftrag.style.display=''; window.scrollTo({top:0, behavior:'smooth'}); });
+document.getElementById('btnBackToKundendaten')?.addEventListener('click', ()=>{ fsAuftrag.style.display='none'; fsKunde.style.display=''; window.scrollTo({top:0, behavior:'smooth'}); });
+document.getElementById('btnToFensterbereich')?.addEventListener('click', ()=>{ fsAuftrag.style.display='none'; fsFenster.style.display=''; window.scrollTo({top:0, behavior:'smooth'}); });
+document.getElementById('btnBackToAuftragsdaten')?.addEventListener('click', ()=>{ fsFenster.style.display='none'; fsAuftrag.style.display=''; window.scrollTo({top:0, behavior:'smooth'}); });
 
 // Farbe
 const farbeSelect = document.getElementById('farbeSelect');
@@ -85,21 +90,6 @@ function updateFarbe(){ farbeSonstige.style.display = farbeSelect.value === 'Son
 farbeSelect?.addEventListener('change', ()=>{ updateFarbe(); saveState();});
 updateFarbe();
 if (farbeSwatches){ ['Anthrazit','Weiß','Grau'].forEach(name=>{ const s=document.createElement('span'); s.className='sw'; s.dataset.name=name; s.title=name; farbeSwatches.appendChild(s); }); }
-
-// Empfänger kompakt/editierbar
-document.getElementById('toggleEmpfBtn')?.addEventListener('click', ()=>{
-  const el = document.getElementById('empfaengerBlock');
-  el.style.display = (el.style.display==='none' || !el.style.display) ? '' : 'none';
-});
-function syncEmpfReadonly(){
-  const get = n => document.querySelector(`[name="${n}"]`)?.value || '';
-  const name = get('empf_name') || 'Empfänger (TEST)';
-  const plz = get('empf_plz'), ort = get('empf_ort');
-  const str = get('empf_strasse');
-  document.getElementById('empf_name_ro').textContent = name;
-  document.getElementById('empf_ort_ro').textContent = `${plz} ${ort}`.trim();
-  document.getElementById('empf_strasse_ro').textContent = str;
-}
 
 // ---------------------------
 // Räume & Fenster
@@ -264,7 +254,7 @@ function wireWindow(div, data){
     out.textContent = active ? 'Simulation aktiv' : '';
   });
   bBtn.addEventListener('click', async ()=>{
-    const val = await simulateMeasure(800, 2400); // Breite typischer
+    const val = await simulateMeasure(800, 2400);
     div.querySelector(`[name="w_breite_${div.dataset.winId}"]`).value = val;
     out.textContent = `Breite: ${val} mm`;
     buzz(); saveState();
@@ -285,7 +275,6 @@ function wireWindow(div, data){
       await sleep(dt);
     }
     out.textContent = `Übernommen: ${last} mm`;
-    // setze auf Breite, wenn leer – sonst Höhe
     const bEl = div.querySelector(`[name="w_breite_${div.dataset.winId}"]`);
     const hEl = div.querySelector(`[name="w_hoehe_${div.dataset.winId}"]`);
     if (!bEl.value) bEl.value = last; else hEl.value = last;
@@ -336,13 +325,8 @@ function exportRooms(){
   });
   return rooms;
 }
-function importRooms(list){
-  if (!Array.isArray(list)) return;
-  raeumeContainer.innerHTML='';
-  list.forEach((r)=>{ const room = addRoom(r.name || 'Raum'); const body = room.querySelector('.room-body'); (r.fenster||[]).forEach(fw=> addWindow(body, fw)); });
-}
 
-// Utility: Bild-Kompression
+// Utility
 function compressImage(file, maxDim=1400, quality=0.85){
   return new Promise((resolve, reject)=>{
     const fr = new FileReader();
@@ -360,13 +344,11 @@ function compressImage(file, maxDim=1400, quality=0.85){
     fr.onerror = reject; fr.readAsDataURL(file);
   });
 }
-// Helpers
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
 function buzz(){ if ('vibrate' in navigator) navigator.vibrate(15); }
 async function simulateMeasure(min=400, max=3000, jitterOnly=false){
-  // Grundwert ~ gleichverteilt, plus Toleranz ±2 mm
   const base = Math.round(min + Math.random() * (max-min));
-  const tol = Math.round((Math.random()*4)-2); // -2..+2
+  const tol = Math.round((Math.random()*4)-2);
   const val = base + (jitterOnly ? Math.round((Math.random()*2)-1) : tol);
   return Math.max(min, Math.min(max, val));
 }
@@ -382,10 +364,7 @@ function fillDemo(){
   document.querySelector('#farbeSelect').value = 'Anthrazit'; updateFarbe();
   document.querySelector('[name="glas"][value="3-fach"]').checked = true;
   document.querySelector('[name="fba"][value="Ja"]').checked = true;
-  // Empfänger (TEST)
-  set('empf_name','Frau Erika Beispiel (TEST)'); set('empf_tel','0711 98765');
-  set('empf_strasse','Am Park 5'); set('empf_plz','70372'); set('empf_ort','Stuttgart-Bad Cannstatt');
-  syncEmpfReadonly();
+
   // Raum+Fenster
   raeumeContainer.innerHTML=''; const room = addRoom('Wohnzimmer'); const body = room.querySelector('.room-body');
   const w1 = addWindow(body); const w2 = addWindow(body);
@@ -402,26 +381,61 @@ function fillDemo(){
 }
 document.getElementById('fillDemoBtn')?.addEventListener('click', fillDemo);
 
-// Guided Demo: führt in 3 Klicks durch
+// Geführte Demo: sichtbares Tippen & Schritte
 document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
-  fillDemo();
-  // Schritt 1 -> 2
-  flash(document.getElementById('btnToAuftragsdaten')); await sleep(700);
+  // Reset
+  localStorage.removeItem(FORM_KEY);
+  document.getElementById('aufmassForm').reset();
+  raeumeContainer.innerHTML='';
+
+  await typeFill('[name="firma"]','Musterbau GmbH (TESTKUNDE)');
+  await typeFill('[name="name"]','Max Mustermann');
+  await typeFill('[name="strasse"]','Beispielweg 12', 20);
+  await typeFill('[name="plz"]','70173', 50);
+  await typeFill('[name="ort"]','Stuttgart', 40);
+  await typeFill('[name="telefon"]','0711123456', 30);
+  await typeFill('[name="email"]','max@musterbau.example', 20);
+
+  flash(document.getElementById('btnToAuftragsdaten')); await sleep(500);
   document.getElementById('btnToAuftragsdaten').click();
-  // Schritt 2 -> 3
-  flash(document.getElementById('btnToFensterbereich')); await sleep(700);
+
+  document.querySelector('[name="gebaeudeart"][value="Altbau"]').checked = true; await sleep(200);
+  document.querySelector('[name="material"][value="Kunststoff"]').checked = true; await sleep(200);
+  document.getElementById('farbeSelect').value = 'Anthrazit'; updateFarbe(); await sleep(200);
+  document.querySelector('[name="glas"][value="3-fach"]').checked = true; await sleep(200);
+  document.querySelector('[name="fba"][value="Ja"]').checked = true; await sleep(200);
+
+  flash(document.getElementById('btnToFensterbereich')); await sleep(500);
   document.getElementById('btnToFensterbereich').click();
-  // Raum anlegen
-  flash(document.getElementById('addRaumBtn')); await sleep(700);
-  if (!raeumeContainer.querySelector('.room')) document.getElementById('addRaumBtn').click();
-  // Fenster hinzufügen
-  const roomBody = raeumeContainer.querySelector('.room .room-body');
-  const addBtn = raeumeContainer.querySelector('.room [data-action="add-window"]');
-  flash(addBtn); await sleep(700); addBtn.click();
+
+  flash(document.getElementById('addRaumBtn')); await sleep(400);
+  document.getElementById('addRaumBtn').click();
+  const body = raeumeContainer.querySelector('.room .room-body');
+
+  const w = addWindow(body);
+  const id = w.dataset.winId;
+  await typeFill(`[name="w_bez_${id}"]`,'Fenster links', 40);
+  await typeFill(`[name="w_breite_${id}"]`,'1200', 60);
+  await typeFill(`[name="w_hoehe_${id}"]`,'1400', 60);
+  const radio = w.querySelector(`input[name="w_art_${id}"][value="Drehkipp links"]`); radio.checked = true;
+
+  // Laser-Demo
+  const en = w.querySelector('[data-role="sim-enabled"]'); en.click(); await sleep(200);
+  w.querySelector('[data-action="sim-breite"]').click(); await sleep(300);
+  w.querySelector('[data-action="sim-hoehe"]').click(); await sleep(300);
+
+  flash(document.getElementById('submitButton')); await sleep(700);
 });
 function flash(el){ if(!el) return; el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1000); }
+async function typeFill(selector, val, per=25){
+  const el = document.querySelector(selector); if(!el) return;
+  el.focus(); el.value='';
+  for (let i=0;i<val.length;i++){ el.value += val[i]; await sleep(per); }
+  el.blur();
+  saveState();
+}
 
-// Submit / Drucken -> echte PDF
+// Submit / Drucken -> PDF
 document.getElementById('aufmassForm')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   document.getElementById('loadingBar').style.display='';
@@ -436,9 +450,27 @@ document.getElementById('aufmassForm')?.addEventListener('submit', async (e)=>{
 document.getElementById('newAufmassBtn')?.addEventListener('click', ()=>{ location.reload(); });
 document.getElementById('printBtn')?.addEventListener('click', async ()=>{ await openPdfPreview(); });
 
-// PDF Hook
+// PDF Hook – robustes Nachladen bei Bedarf
+async function ensurePdfLib(){
+  if (window.PDFLib) return true;
+  // Versuch: lokal nachladen (falls SW alt war)
+  try {
+    await loadScript('vendor/pdf-lib.min.js?v=5'); // cache-bust
+    if (window.PDFLib) return true;
+  } catch {}
+  // Fallback: CDN
+  try {
+    await loadScript('https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js');
+    return !!window.PDFLib;
+  } catch { return false; }
+}
+function loadScript(src){
+  return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); });
+}
+
 async function openPdfPreview(){
-  if (!window.PDFLib) { alert('PDF-Bibliothek nicht geladen. Prüfe vendor/pdf-lib.min.js'); return; }
+  const ok = await ensurePdfLib();
+  if (!ok) { alert('PDF-Bibliothek konnte nicht geladen werden. Bitte prüfen: /vendor/pdf-lib.min.js'); return; }
   const data = collectAllData();
   await createPdfAndOpen(data);
 }
@@ -450,11 +482,7 @@ function collectAllData(){
   return {
     kundendaten: {
       firma: obj.firma || '', name: obj.name || '', strasse: obj.strasse||'', plz: obj.plz||'', ort: obj.ort||'',
-      telefon: obj.telefon||'', email: obj.email||'',
-      empfaenger: { // in der Demo immer als TEST im PDF
-        name: obj.empf_name||'Empfänger (TEST)', tel: obj.empf_tel||'',
-        strasse: obj.empf_strasse||'', plz: obj.empf_plz||'', ort: obj.empf_ort||''
-      }
+      telefon: obj.telefon||'', email: obj.email||''
     },
     auftragsdaten: {
       gebaeudeart: (form.querySelector('input[name="gebaeudeart"]:checked')||{}).value || '',
