@@ -1,4 +1,4 @@
-// Formatiertes A4-PDF mit Logo, Kopf (TESTKUNDE), Tabellen, Fotos & Skizze (helles Layout)
+// A4-PDF (hell), Logo etwas größer, klare Struktur; Bilder & Skizzen inklusive
 async function createPdfAndOpen(data){
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
 
@@ -7,7 +7,7 @@ async function createPdfAndOpen(data){
   const fontR = await doc.embedFont(StandardFonts.Helvetica);
   const fontB = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  // Logo
+  // Logo (PNG bevorzugt, SVG→Canvas Fallback)
   const logoBytes = await loadLogoPngBytes();
   const logoImg = logoBytes ? await doc.embedPng(logoBytes) : null;
 
@@ -46,16 +46,16 @@ async function createPdfAndOpen(data){
     y -= h + 2;
   }
 
-  // Header: Logo + Titel + Datum + Auftraggeber (TESTKUNDE)
+  // Header
   (function header(){
     const title = 'Aufmaß – DEMO';
     const dateStr = new Date().toLocaleDateString('de-DE');
-    const headH = 60; ensure(headH);
+    const headH = 62; ensure(headH);
 
-    // Logo
+    // Logo etwas größer (maxW 170)
     let lx = MARGIN;
     if (logoImg){
-      const maxW = 150;
+      const maxW = 170;
       const w = Math.min(maxW, logoImg.width), h = logoImg.height * (w / logoImg.width);
       page.drawImage(logoImg, { x:MARGIN, y:y - h + 8, width: w, height: h });
       lx = MARGIN + w + 12;
@@ -66,13 +66,12 @@ async function createPdfAndOpen(data){
 
     y -= headH - 6;
 
-    // Auftraggeber links (einspaltig)
+    // Auftraggeber (einspaltig) + TESTKUNDE
     const kd = data.kundendaten || {};
     text('Auftraggeber', MARGIN, y, { size:11, font:fontB });
     badge(MARGIN+90, y+9, 'TESTKUNDE', { fill: rgb(0.95,0.55,0.18) });
     y -= 16;
 
-    const leftW = CONTENT_W;
     const l0 = [
       ['Firma', kd.firma || ''],
       ['Name', kd.name || ''],
@@ -81,27 +80,25 @@ async function createPdfAndOpen(data){
       ['Telefon', kd.telefon || ''],
       ['E-Mail', kd.email || '']
     ];
-    for (const [k,v] of l0){ keyVal(k, v, MARGIN, leftW); }
+    for (const [k,v] of l0){ keyVal(k, v, MARGIN, CONTENT_W); }
     y -= 8;
   })();
 
-  // Auftragsdaten (zweispaltig)
+  // Auftragsdaten
   sectionTitle('Auftragsdaten');
   const ad = data.auftragsdaten || {};
-  const adPairs = [
+  const pairs = [
     ['Gebäudeart', ad.gebaeudeart || ''],
     ['Material', ad.material || ''],
     ['Farbe', ad.farbe === 'Sonstige' ? `${ad.farbe} – ${ad.farbeSonstige||''}` : (ad.farbe || '')],
     ['Glas', ad.glas || ''],
     ['FBA', ad.fba || '']
   ];
-  const twoColW = (CONTENT_W - 12)/2;
-  let yAdStart = y;
-  for (let i=0;i<adPairs.length;i+=2){
-    const [k1,v1] = adPairs[i]; keyVal(k1, v1, MARGIN, twoColW); const yAfterLeft = y;
-    if (adPairs[i+1]){ y = yAdStart; const [k2,v2] = adPairs[i+1]; keyVal(k2, v2, MARGIN+twoColW+12, twoColW); yAdStart = y; y = Math.min(yAfterLeft, y); }
-    else { y = yAfterLeft; }
-    yAdStart = y;
+  const twoColW = (CONTENT_W - 12)/2; let yRef = y;
+  for (let i=0;i<pairs.length;i+=2){
+    const [k1,v1] = pairs[i]; keyVal(k1, v1, MARGIN, twoColW); const yLeft = y;
+    if (pairs[i+1]){ y = yRef; const [k2,v2] = pairs[i+1]; keyVal(k2, v2, MARGIN+twoColW+12, twoColW); yRef = y; y = Math.min(yLeft, y); }
+    else { y = yLeft; }
   }
   y -= 4;
 
@@ -126,7 +123,7 @@ async function createPdfAndOpen(data){
       y = Math.min(yAfterLeft, y);
       y -= 4;
 
-      // Bilder
+      // Bilder (Fotos + Skizze)
       const imgs = []; (w.fotos||[]).forEach(u=> imgs.push(u)); if (w.skizze) imgs.push(w.skizze);
       if (imgs.length){
         const perRow = 3, gapX = 8;
@@ -148,7 +145,6 @@ async function createPdfAndOpen(data){
     }
   }
 
-  // Footer
   drawFooter(page, pageNo);
 
   const pdfBytes = await doc.save();
@@ -170,7 +166,7 @@ async function loadLogoPngBytes(){
     const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
     const img = await loadImage(dataUrl);
     const canvas = document.createElement('canvas');
-    const targetW = 500;
+    const targetW = 520; // etwas größer gerendert
     const scale = targetW / img.width;
     canvas.width = Math.round(img.width * scale);
     canvas.height = Math.round(img.height * scale);
