@@ -1,4 +1,4 @@
-/* PWA + Formular + Fenster-Editor + Guided Demo (langsamer) + Laser-Simulation + iPhone-Optimierungen */
+/* PWA + Formular + Fenster-Editor + Guided Demo (angepasst) + Laser-Simulation + iPhone-Optimierungen */
 let deferredPrompt = null;
 
 // Service Worker
@@ -41,15 +41,14 @@ connectionBadge?.addEventListener('click', ()=>{
 });
 updateOnlineStatus();
 
-// Animierter Hinweis neben „Demo starten“ (blendet nach 6s aus bzw. bei Klick)
-const demoHint = document.getElementById('demoHint');
-setTimeout(()=> demoHint?.classList.add('fade'), 6000);
-document.getElementById('demoGuideBtn')?.addEventListener('click', ()=> demoHint?.remove());
+// Unaufdringlicher Demo-Hinweis (läuft nach 8s aus)
+setTimeout(()=> document.getElementById('demoHintInline')?.classList.remove('hint-inline'), 8000);
+document.getElementById('demoGuideBtn')?.addEventListener('click', ()=> document.getElementById('demoHintInline')?.remove());
 
 // ---------------------------
 // State-Persistenz
 // ---------------------------
-const FORM_KEY = 'aufmass-demo-form-v7';
+const FORM_KEY = 'aufmass-demo-form-v8';
 const MAX_PHOTOS = 3;
 
 function saveState(){
@@ -142,7 +141,6 @@ function addWindow(parent, data){
   return div;
 }
 function windowHtml(id){
-  /* Breite/Höhe in einer Zeile; direkt darunter Laser-Simulation; dann Typ/Optionen; Media & Skizze */
   return `
   <div class="win-grid">
     <div class="win-row">
@@ -390,17 +388,58 @@ function ensureVisible(el){
   if (el && el.classList){ el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1000); }
 }
 
-// Sample-Bilder als Canvas (offline)
-function sampleImage(text, w=800, h=530){
-  const c = document.createElement('canvas'); c.width=w; c.height=h;
-  const g = c.getContext('2d');
-  g.fillStyle = '#e5e5ea'; g.fillRect(0,0,w,h);
-  g.fillStyle = '#b0b0b8'; g.fillRect(20,20,w-40,h-40);
-  g.fillStyle = '#111'; g.font = 'bold 42px -apple-system,Segoe UI,Roboto';
-  const m = g.measureText(text); g.fillText(text, (w-m.width)/2, Math.floor(h/2));
-  return c.toDataURL('image/jpeg', 0.9);
+// ----- Coachmark / Hinweis auf Drucken
+const coach = document.getElementById('coachPrint');
+const printBtn = document.getElementById('printBtn');
+function positionCoach(){
+  if (!coach || !printBtn) return;
+  const r = printBtn.getBoundingClientRect();
+  const pad = 10;
+  coach.style.left = (r.left + window.scrollX) + 'px';
+  coach.style.top  = (r.bottom + window.scrollY + pad) + 'px';
+  coach.style.setProperty('--arrow-left', '16px');
+  coach.style.setProperty('--arrow-top', '-6px');
+  coach.style.setProperty('--arrow-rotate', '45deg');
+  coach.style.transform = 'translateY(0)';
+  coach.style.pointerEvents = 'auto';
+  coach.style.display = 'block';
+  coach.hidden = false;
+  // Pfeil positionieren
+  coach.style.setProperty('--arrow-x', (20) + 'px');
+  coach.style.setProperty('--arrow-y', (-6) + 'px');
+  coach.style.position = 'absolute';
+  coach.classList.add('visible');
+  printBtn.classList.add('focus-ring');
+  // Arrow via ::after
+  coach.style.setProperty('--arrow-left', '18px');
+  coach.style.setProperty('--arrow-top', '-6px');
+  coach.style.setProperty('--arrow-rotate', '45deg');
+  coach.style.setProperty('--arrow-display', 'block');
+  coach.style.setProperty('--arrow-color', '#fff');
+  coach.style.setProperty('--arrow-border', 'var(--border)');
+  coach.style.setProperty('--arrow-shadow', 'var(--shadow)');
+  coach.style.setProperty('--arrow-size', '10px');
+  coach.style.setProperty('--arrow-opacity', '1');
+  coach.style.setProperty('--z-index', '70');
+  coach.style.setProperty('--max-width', '280px');
+  coach.style.setProperty('--bg', '#fff');
 }
+function showCoach(){
+  positionCoach();
+  window.addEventListener('resize', positionCoach);
+  window.addEventListener('scroll', positionCoach, { passive:true });
+}
+function hideCoach(){
+  if (!coach) return;
+  coach.hidden = true; coach.style.display='none';
+  printBtn?.classList.remove('focus-ring');
+  window.removeEventListener('resize', positionCoach);
+  window.removeEventListener('scroll', positionCoach);
+}
+coach?.querySelector('.coach-close')?.addEventListener('click', hideCoach);
+printBtn?.addEventListener('click', hideCoach);
 
+// ---------------------------
 // Testdaten Toggle
 let demoFilled = false;
 function clearDemo(){
@@ -452,14 +491,9 @@ fillBtn?.addEventListener('click', ()=>{
   else { clearDemo(); demoFilled = false; fillBtn.textContent = 'Testdaten'; fillBtn.setAttribute('aria-pressed','false'); }
 });
 
-// Geführte Demo: langsamer + Fokus + Auto-Scroll + PDF in vorab geöffnetem Tab
+// ---------------------------
+// Geführte Demo: kein Autopdf, Coachmark am Ende, Skizze zeichnen
 document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
-  // Sofort einen Tab öffnen (Popup-Blocker umgehen)
-  window.__pdfTarget = window.open('about:blank', '_blank');
-  if (window.__pdfTarget && !window.__pdfTarget.closed) {
-    try { window.__pdfTarget.document.write('<title>PDF Vorschau…</title><p style="font-family:sans-serif">PDF wird vorbereitet…</p>'); } catch {}
-  }
-
   // Reset
   localStorage.removeItem(FORM_KEY);
   document.getElementById('aufmassForm').reset();
@@ -499,13 +533,17 @@ document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
   await typeFill(`[name="w_breite_${id1}"]`,'1200', slow);
   await typeFill(`[name="w_hoehe_${id1}"]`,'1400', slow);
   await selectAndFlash(`input[name="w_art_${id1}"][value="Drehkipp links"]`, w1);
+
   // Laser kurz demonstrieren
-  const en = w1.querySelector('[data-role="sim-enabled"]'); en.click(); ensureVisible(w1.querySelector('.sim')); await sleep(300);
+  const en1 = w1.querySelector('[data-role="sim-enabled"]'); en1.click(); ensureVisible(w1.querySelector('.sim')); await sleep(300);
   w1.querySelector('[data-action="sim-breite"]').click(); await sleep(350);
   w1.querySelector('[data-action="sim-hoehe"]').click(); await sleep(450);
-  // Beispielbilder
+
+  // Beispielbilder & Skizze
   addPhotoToWin(w1, sampleImage('Beispielbild 1')); await sleep(300);
   addPhotoToWin(w1, sampleImage('Beispielbild 2')); await sleep(350);
+  await drawDemoSketch(w1.querySelector('[data-role="canvas"]'), 'Fenster-Skizze'); await sleep(200);
+  w1.querySelector('[data-action="sketch-save"]').click(); await sleep(300);
 
   const r2 = addRoom('Schlafzimmer'); const b2 = r2.querySelector('.room-body'); ensureVisible(r2); await sleep(400);
 
@@ -513,16 +551,17 @@ document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
   await typeFill(`[name="w_bez_${id2}"]`,'Fenster rechts', slow);
   await typeFill(`[name="w_breite_${id2}"]`,'900', slow);
   await typeFill(`[name="w_hoehe_${id2}"]`,'1200', slow);
-  await selectAndFlash(`input[name="w_art_${id2}"][value="Festverglast"]`, w2); await sleep(400);
+  await selectAndFlash(`input[name="w_art_${id2}"][value="Festverglast"]`, w2); await sleep(300);
 
   const w3 = addWindow(b2); const id3=w3.dataset.winId; ensureVisible(w3);
   await typeFill(`[name="w_bez_${id3}"]`,'Fenster Balkontür', slow);
   await typeFill(`[name="w_breite_${id3}"]`,'1000', slow);
   await typeFill(`[name="w_hoehe_${id3}"]`,'2100', slow);
-  await selectAndFlash(`input[name="w_art_${id3}"][value="Kipp"]`, w3); await sleep(500);
+  await selectAndFlash(`input[name="w_art_${id3}"][value="Kipp"]`, w3); await sleep(400);
 
-  ensureVisible(document.getElementById('submitButton')); await sleep(700);
-  await openPdfPreview(); // lädt in den bereits geöffneten Tab
+  // Coachmark anzeigen statt Autopdf
+  ensureVisible(document.querySelector('.app-header'));
+  showCoach();
 });
 
 function flash(el){ if(!el) return; el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1000); }
@@ -544,8 +583,21 @@ async function selectAndFlash(selector, scope=document){
   pill.classList.add('bling'); setTimeout(()=>pill.classList.remove('bling'), 260);
   await sleep(380);
 }
+async function drawDemoSketch(canvas, label='Skizze'){
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 3;
+  // Rahmen
+  ctx.strokeRect(50, 40, w-100, h-120);
+  // Kreuz
+  ctx.beginPath(); ctx.moveTo(50, h-80); ctx.lineTo(w-50, 80); ctx.stroke();
+  // Label
+  ctx.font = 'bold 24px -apple-system,Segoe UI,Roboto';
+  ctx.fillStyle = '#111'; ctx.fillText(label, 60, h-40);
+}
 
-// Submit / Drucken -> PDF
+// Submit / Drucken -> PDF (manuell durch Benutzer)
 document.getElementById('aufmassForm')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   document.getElementById('loadingBar').style.display='';
@@ -558,12 +610,15 @@ document.getElementById('aufmassForm')?.addEventListener('submit', async (e)=>{
   }
 });
 document.getElementById('newAufmassBtn')?.addEventListener('click', ()=>{ location.reload(); });
-document.getElementById('printBtn')?.addEventListener('click', async ()=>{ await openPdfPreview(); });
+document.getElementById('printBtn')?.addEventListener('click', async ()=>{
+  hideCoach();
+  await openPdfPreview();
+});
 
 // PDF Hook – robustes Nachladen bei Bedarf
 async function ensurePdfLib(){
   if (window.PDFLib) return true;
-  try { await loadScript('vendor/pdf-lib.min.js?v=7'); if (window.PDFLib) return true; } catch {}
+  try { await loadScript('vendor/pdf-lib.min.js?v=8'); if (window.PDFLib) return true; } catch {}
   try { await loadScript('https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'); return !!window.PDFLib; } catch { return false; }
 }
 function loadScript(src){
@@ -573,7 +628,7 @@ async function openPdfPreview(){
   const ok = await ensurePdfLib();
   if (!ok) { alert('PDF-Bibliothek konnte nicht geladen werden. Bitte prüfen: /vendor/pdf-lib.min.js'); return; }
   const data = collectAllData();
-  await createPdfAndOpen(data); // nutzt ggf. window.__pdfTarget
+  await createPdfAndOpen(data);
 }
 function collectAllData(){
   const form = document.getElementById('aufmassForm');
