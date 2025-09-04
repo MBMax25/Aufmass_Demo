@@ -1,4 +1,6 @@
 :root{
+```css
+:root{
 --bg:#0b121b; /* sehr dunkles Blau */
 --panel:#111a24;
 --muted:#718096;
