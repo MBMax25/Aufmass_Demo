@@ -36,8 +36,7 @@
   <main class="container">
     <!-- Info-Hinweis (API-ready) -->
     <aside class="info-banner" role="note">
-      <strong>API-ready:</strong> Diese Demo ist voll clientseitig. Anbindungen (ERP/CRM/Docs)
-      sind vorbereitet, aber deaktiviert.
+      <strong>API-ready:</strong> Diese Demo ist voll clientseitig. Anbindungen (ERP/CRM/Docs) sind vorbereitet, aber deaktiviert.
     </aside>
 
     <div class="form-wrapper">
@@ -173,7 +172,7 @@
       <!-- Abschlussseite -->
       <div id="abschlussSeite" style="display:none; text-align:center; margin-top:2em;">
         <h2>✅ Aufmaß erfolgreich erfasst</h2>
-        <p>PDF wird in einem neuen Tab geöffnet (Demo-Modus).</p>
+        <p>PDF wird in einem neuen Tab geöffnet.</p>
         <img src="https://cdn-icons-png.flaticon.com/512/553/553416.png" width="140" alt="Erfolg" style="margin-top:1em;" />
         <br /><br />
         <button type="button" id="newAufmassBtn">Weiteres Aufmaß erstellen</button>
@@ -181,9 +180,11 @@
     </div>
   </main>
 
-  <noscript>
-    Bitte JavaScript aktivieren – diese Demo benötigt JS.
-  </noscript>
+  <noscript>Bitte JavaScript aktivieren – diese Demo benötigt JS.</noscript>
+
+  <!-- pdf-lib lokal (empfohlen für PWA-Wirkung) -->
+  <script src="vendor/pdf-lib.min.js"></script>
+  <!-- CDN-Alternative: <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script> -->
 
   <script src="app.js" defer></script>
   <script src="pdf.js" defer></script>
