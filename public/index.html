@@ -25,79 +25,47 @@
       <div class="logo-wrap">
         <img class="logo" src="assets/logo.svg" alt="Logo" onerror="this.src='assets/logo@2x.png'" />
       </div>
-      <div class="app-title">Aufmaß&nbsp;–&nbsp;Demo PWA</div>
+      <div class="app-title">Aufmaß&nbsp;Demo</div>
     </div>
     <div class="header-actions">
-      <span id="connectionBadge" class="badge" title="Verbindungsstatus">Online</span>
+      <button id="connectionBadge" class="badge" type="button" title="Verbindungsstatus">Online</button>
       <button id="installBtn" class="btn btn-secondary" hidden>Installieren</button>
       <button id="demoGuideBtn" class="btn btn-ghost" title="Geführte Demo starten">Demo starten</button>
-      <button id="fillDemoBtn" class="btn btn-ghost" title="Testdaten füllen">Testdaten</button>
       <button id="printBtn" class="btn btn-primary" title="PDF anzeigen">Drucken/Speichern</button>
     </div>
   </header>
 
   <main class="container">
-    <!-- Info-Hinweis (API-ready) -->
+    <!-- Hinweis (CRM-Echtzeit) -->
     <aside class="info-banner" role="note">
-      <strong>API-ready:</strong> In einer echten Umgebung werden Kundendaten und Empfänger (Kunde des Kunden)
-      automatisch aus ERP/CRM gezogen. In dieser Demo sind Testdaten hinterlegt und die Eingabe ist geführter Natur.
+      <strong>Hinweis:</strong> Kundendaten können in Echtzeit aus Ihrem vorhandenen CRM/ERP übernommen werden.
+      In dieser Demo erfolgt die Eingabe manuell bzw. über „Testdaten“.
     </aside>
 
     <div class="form-wrapper">
       <form id="aufmassForm">
         <!-- Schritt 1: Kundendaten -->
         <fieldset id="kundendaten">
-          <legend>Kundendaten (schnell ausgefüllt)</legend>
+          <div class="legend-row">
+            <legend>Kundendaten</legend>
+            <button id="fillDemoBtn" class="btn btn-ghost" type="button">Testdaten</button>
+          </div>
 
-          <label><span>Firma:</span><input type="text" id="firma" name="firma" placeholder="Firma" /></label>
+          <label><span>Firma:</span><input type="text" id="firma" name="firma" placeholder="Firma" autocomplete="organization" /></label>
 
           <div id="nameContainer">
-            <label><span>Name:</span><input type="text" name="name" placeholder="Ansprechpartner/Name" /></label>
-          </div>
-
-          <!-- Empfänger (Kunde des Kunden) kompakt & nicht verwirrend -->
-          <div class="section-divider"></div>
-          <div class="card soft">
-            <div class="card-title-row">
-              <div class="card-title">Empfänger (Kunde des Kunden) <small class="muted">(automatisch aus ERP/CRM)</small></div>
-              <button type="button" class="btn btn-link" id="toggleEmpfBtn">Bearbeiten</button>
-            </div>
-            <div class="row-inline read-only" id="empfReadonly">
-              <div><strong>Name:</strong> <span id="empf_name_ro">–</span></div>
-              <div><strong>PLZ/Ort:</strong> <span id="empf_ort_ro">–</span></div>
-              <div><strong>Straße:</strong> <span id="empf_strasse_ro">–</span></div>
-            </div>
-            <div id="empfaengerBlock" class="empf-edit" style="display:none;">
-              <div class="row-inline">
-                <label style="flex:2;"><span>Empfänger – Name:</span><input type="text" name="empf_name" /></label>
-                <label style="flex:1;"><span>Empfänger – Telefon:</span><input type="text" name="empf_tel" /></label>
-              </div>
-              <div class="row-inline">
-                <label style="flex:2;"><span>Straße:</span><input type="text" name="empf_strasse" /></label>
-                <label style="flex:1;"><span>PLZ:</span><input type="text" name="empf_plz" /></label>
-                <label style="flex:1;"><span>Ort:</span><input type="text" name="empf_ort" /></label>
-              </div>
-            </div>
-          </div>
-
-          <div class="section-divider"></div>
-
-          <div id="zusatzfelder" style="display:none;">
-            <div class="row-inline">
-              <label><span>Ansprechpartner:</span><input type="text" name="ansprechpartner" /></label>
-              <label><span>Kommission:</span><input type="text" name="kommission" /></label>
-            </div>
+            <label><span>Name:</span><input type="text" name="name" placeholder="Ansprechpartner/Name" autocomplete="name"/></label>
           </div>
 
           <div class="row-inline">
-            <label style="flex:2;"><span>Straße:</span><input type="text" name="strasse" /></label>
-            <label style="flex:1;"><span>PLZ:</span><input type="text" name="plz" /></label>
-            <label style="flex:1;"><span>Ort:</span><input type="text" name="ort" /></label>
+            <label style="flex:2;"><span>Straße:</span><input type="text" name="strasse" autocomplete="address-line1"/></label>
+            <label style="flex:1;"><span>PLZ:</span><input type="text" name="plz" inputmode="numeric" autocomplete="postal-code"/></label>
+            <label style="flex:1;"><span>Ort:</span><input type="text" name="ort" autocomplete="address-level2"/></label>
           </div>
 
           <div class="row-inline">
-            <label style="flex:1;"><span>Telefon:</span><input type="text" name="telefon" /></label>
-            <label style="flex:1;"><span>E-Mail:</span><input type="email" name="email" /></label>
+            <label style="flex:1;"><span>Telefon:</span><input type="text" name="telefon" autocomplete="tel"/></label>
+            <label style="flex:1;"><span>E-Mail:</span><input type="email" name="email" autocomplete="email"/></label>
           </div>
 
           <div class="row-inline">
@@ -108,6 +76,11 @@
         <!-- Schritt 2: Auftragsdaten -->
         <fieldset id="auftragsdaten" style="display:none;">
           <legend>Auftragsdaten</legend>
+
+          <div class="note-card">
+            <strong>Hinweis:</strong> Alle zu erfassenden Daten, Maße und Produkteigenschaften
+            können pro Kunde individuell angepasst werden (Beispiele unten).
+          </div>
 
           <div class="row-inline">
             <label style="flex:none;"><span>Gebäudeart:</span></label>
@@ -154,6 +127,18 @@
             <label class="inline-radio-item"><input type="radio" name="fba" value="Nein" /> Nein</label>
           </div>
 
+          <!-- Eingabearten (Test) -->
+          <div class="card soft">
+            <div class="card-title">Eingabearten (Test)</div>
+            <div class="row-inline">
+              <label><span>Dropdown:</span>
+                <select><option>Option A</option><option>Option B</option><option>Option C</option></select>
+              </label>
+              <label class="inline-checkbox-item"><input type="checkbox" /> Checkpoint</label>
+              <label class="inline-radio-item"><input type="radio" name="wahltest" /> Auswahl</label>
+            </div>
+          </div>
+
           <div class="row-inline">
             <button type="button" id="btnBackToKundendaten" class="btn btn-secondary">Zurück</button>
             <button type="button" id="btnToFensterbereich" class="btn btn-primary">Weiter</button>
@@ -163,6 +148,11 @@
         <!-- Schritt 3: Fensteraufmaß -->
         <fieldset id="fensterbereich" style="display:none;">
           <legend>Fensteraufmaß</legend>
+
+          <div class="note-card">
+            <strong>Hinweis:</strong> Räume anlegen → pro Raum Fenster hinzufügen → Maße eintragen oder messen →
+            Fotos/Skizze ergänzen → „Drucken/Speichern“.
+          </div>
 
           <div id="raeumeContainer"></div>
           <button type="button" class="add-btn btn btn-ghost" id="addRaumBtn">+ Raum hinzufügen</button>
@@ -189,11 +179,13 @@
     </div>
   </main>
 
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
   <noscript>Bitte JavaScript aktivieren – diese Demo benötigt JS.</noscript>
 
-  <!-- pdf-lib lokal (empfohlen für PWA-Wirkung) -->
-  <script src="vendor/pdf-lib.min.js"></script>
-
+  <!-- pdf-lib lokal (mit Cache-Bust) -->
+  <script src="vendor/pdf-lib.min.js?v=5"></script>
   <script src="app.js" defer></script>
   <script src="pdf.js" defer></script>
 </body>
