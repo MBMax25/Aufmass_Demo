@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="300" viewBox="0 0 800 300">
+  <!-- Symbol Kreis -->
+  <circle cx="150" cy="150" r="120" stroke="#0b132b" stroke-width="16" fill="none"/>
+  <!-- Sanduhr-H -->
+  <path d="M110 70 L110 120 Q150 150 110 180 L110 230 
+           M190 70 L190 120 Q150 150 190 180 L190 230" 
+        stroke="#0b132b" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <!-- Text -->
+  <text x="320" y="175" font-family="Montserrat, Poppins, Arial, sans-serif" font-size="96" fill="#0b132b">
+    <tspan font-weight="700">HEPO</tspan><tspan font-weight="400">tech</tspan>
+  </text>
+</svg>
