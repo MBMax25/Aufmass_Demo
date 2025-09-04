@@ -1,30 +1,15 @@
 :root{
-  --bg:#0b121b; /* sehr dunkles Blau */
-  --panel:#111a24;
-  --muted:#718096;
-  --text:#e6eef7;
-  --accent:#0ea5e9; /* cyan-blau */
-  --accent-2:#22d3ee; /* heller Akzent */
-  --border:#1f2a37;
-  --ok:#10b981;
-  --warn:#f59e0b;
-  --danger:#ef4444;
+  --bg:#0b121b; --panel:#111a24; --muted:#718096; --text:#e6eef7;
+  --accent:#0ea5e9; --accent-2:#22d3ee; --border:#1f2a37;
+  --ok:#10b981; --warn:#f59e0b; --danger:#ef4444;
 }
 *{box-sizing:border-box}
 html,body{height:100%}
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
-  background:linear-gradient(180deg, #0b121b 0%, #0e1723 100%);
-  color:var(--text);
-}
+body{margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;
+  background:linear-gradient(180deg,#0b121b 0%,#0e1723 100%); color:var(--text);}
 
-.app-header{
-  position:sticky; top:0; z-index:50;
-  display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px; background:rgba(11,18,27,0.85); backdrop-filter:saturate(180%) blur(10px);
-  border-bottom:1px solid var(--border);
-}
+.app-header{position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; background:rgba(11,18,27,.85); backdrop-filter:saturate(180%) blur(10px); border-bottom:1px solid var(--border);}
 .brand{display:flex; align-items:center; gap:12px}
 .brand img{height:28px}
 .app-title{font-weight:600; opacity:.9}
@@ -38,13 +23,12 @@ legend{font-weight:600; margin-bottom:8px}
 fieldset{border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:16px}
 label{display:flex; align-items:center; gap:8px; margin:8px 0}
 label > span{width:160px; opacity:.9}
-input[type=text], input[type=email], select{
-  flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
-  background:#0e1620; color:var(--text); outline:none
-}
+input[type=text], input[type=email], select{flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--border);
+  background:#0e1620; color:var(--text); outline:none}
 input:focus, select:focus{border-color:var(--accent)}
 .row-inline{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
-.inline-radio-item, .inline-checkbox-item{display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border); border-radius:12px; background:#0e1620}
+.inline-radio-item, .inline-checkbox-item{display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--border);
+  border-radius:12px; background:#0e1620}
 .section-divider{height:1px; background:var(--border); margin:12px 0}
 .add-btn{margin-top:12px}
 
@@ -75,7 +59,7 @@ input:focus, select:focus{border-color:var(--accent)}
 
 .empty-hint{opacity:.7; font-size:14px; margin:10px 0}
 
-/* --- Fenster-Editor (Schritt 2) --- */
+/* Fenster-Editor */
 .win-grid{display:grid; grid-template-columns:1fr; gap:10px}
 .win-row{display:flex; gap:10px; flex-wrap:wrap}
 .win-actions{display:flex; gap:8px; align-items:center; margin-left:auto}
@@ -92,14 +76,9 @@ input:focus, select:focus{border-color:var(--accent)}
 .sketch-toolbar{display:flex; gap:8px; align-items:center; margin-top:8px}
 .sketch-toolbar input[type=range]{width:160px}
 
-.sim{
-  border:1px dashed rgba(14,165,233,.35);
-  background:rgba(14,165,233,.08);
-  padding:8px; border-radius:8px;
-}
+.sim{border:1px dashed rgba(14,165,233,.35); background:rgba(14,165,233,.08); padding:8px; border-radius:8px}
 .sim small{opacity:.8}
 
 .muted{color:var(--muted)}
 
-/* Small screens */
 @media (max-width:600px){ label > span{width:120px} }
