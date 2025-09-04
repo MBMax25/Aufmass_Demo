@@ -1,18 +1,13 @@
-const CACHE_NAME = 'aufmass-demo-shell-v2';
+const CACHE_NAME = 'aufmass-demo-shell-v3';
 const ASSETS = [
-  'index.html',
-  'styles.css',
-  'app.js',
-  'pdf.js',
+  'index.html','styles.css','app.js','pdf.js',
+  'vendor/pdf-lib.min.js',
   'manifest.webmanifest',
-  'assets/logo.svg',
-  'assets/logo@2x.png',
-  'assets/icons/icon-192-maskable.png',
-  'assets/icons/icon-512-maskable.png',
+  'assets/logo.svg','assets/logo@2x.png',
+  'assets/icons/icon-192-maskable.png','assets/icons/icon-512-maskable.png',
   'favicon.ico'
 ];
-
-const BASE = self.registration.scope; // z.B. https://deinprojekt.vercel.app/
+const BASE = self.registration.scope;
 const APP_SHELL = ASSETS.map(p => new URL(p, BASE).toString());
 
 self.addEventListener('install', (event) => {
@@ -22,7 +17,6 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
   })());
 });
-
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
@@ -30,7 +24,6 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
   })());
 });
-
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
