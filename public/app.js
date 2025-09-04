@@ -1,4 +1,4 @@
-/* PWA + Formular + Fenster-Editor (wie zuvor) – plus Hook für echte PDF-Erzeugung */
+/* PWA + Formular + Fenster-Editor + Guided Demo + Laser-Simulation */
 let deferredPrompt = null;
 
 // Service Worker
@@ -28,7 +28,7 @@ const connectionBadge = document.getElementById('connectionBadge');
 function updateOnlineStatus(){
   const online = navigator.onLine;
   connectionBadge.textContent = online ? 'Online' : 'Offline';
-  connectionBadge.className = 'badge ' + (online ? 'badge-online' : 'badge-offline');
+  connectionBadge.className = 'badge';
 }
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
@@ -37,7 +37,7 @@ updateOnlineStatus();
 // ---------------------------
 // State-Persistenz
 // ---------------------------
-const FORM_KEY = 'aufmass-demo-form-v2';
+const FORM_KEY = 'aufmass-demo-form-v4';
 const MAX_PHOTOS = 3;
 
 function saveState(){
@@ -58,16 +58,14 @@ function loadState(){
       const el = form.querySelector(`[name="${CSS.escape(k)}"]`);
       if (el) el.value = v;
     }
-    if (obj.empf_name || obj.empf_tel || obj.empf_strasse){
-      document.getElementById('empfaengerToggle').checked = true;
-      document.getElementById('empfaengerBlock').style.display = '';
-    }
     importRooms(obj._rooms || []);
+    // Empfänger Readonly-Preview updaten
+    syncEmpfReadonly();
   } catch(e){ console.warn('loadState failed', e); }
 }
 let saveTimer=null;
 document.getElementById('aufmassForm').addEventListener('input', ()=>{
-  clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 300);
+  clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ syncEmpfReadonly(); saveState(); }, 250);
 });
 
 // Step navigation
@@ -88,9 +86,20 @@ farbeSelect?.addEventListener('change', ()=>{ updateFarbe(); saveState();});
 updateFarbe();
 if (farbeSwatches){ ['Anthrazit','Weiß','Grau'].forEach(name=>{ const s=document.createElement('span'); s.className='sw'; s.dataset.name=name; s.title=name; farbeSwatches.appendChild(s); }); }
 
-// Empfänger Toggle
-const empfaengerToggle = document.getElementById('empfaengerToggle');
-empfaengerToggle?.addEventListener('change', (e)=>{ document.getElementById('empfaengerBlock').style.display = e.target.checked ? '' : 'none'; });
+// Empfänger kompakt/editierbar
+document.getElementById('toggleEmpfBtn')?.addEventListener('click', ()=>{
+  const el = document.getElementById('empfaengerBlock');
+  el.style.display = (el.style.display==='none' || !el.style.display) ? '' : 'none';
+});
+function syncEmpfReadonly(){
+  const get = n => document.querySelector(`[name="${n}"]`)?.value || '';
+  const name = get('empf_name') || 'Empfänger (TEST)';
+  const plz = get('empf_plz'), ort = get('empf_ort');
+  const str = get('empf_strasse');
+  document.getElementById('empf_name_ro').textContent = name;
+  document.getElementById('empf_ort_ro').textContent = `${plz} ${ort}`.trim();
+  document.getElementById('empf_strasse_ro').textContent = str;
+}
 
 // ---------------------------
 // Räume & Fenster
@@ -158,6 +167,7 @@ function windowHtml(id){
       <label class="inline-checkbox-item"><input type="checkbox" name="w_opt_schutz_${id}" /> Schallschutz</label>
       <label class="inline-checkbox-item"><input type="checkbox" name="w_opt_abs_${id}" /> Abschließbar</label>
     </div>
+
     <div class="card">
       <div class="card-title">Fotos (max. ${MAX_PHOTOS})</div>
       <div class="thumbs" data-role="thumbs"></div>
@@ -167,6 +177,7 @@ function windowHtml(id){
         <small class="muted">Bilder werden automatisch komprimiert.</small>
       </div>
     </div>
+
     <div class="sketch">
       <div class="card-title">Skizze</div>
       <canvas data-role="canvas" width="800" height="440"></canvas>
@@ -177,14 +188,19 @@ function windowHtml(id){
         <span data-role="sketch-status" style="opacity:.8; margin-left:8px;">noch nicht gespeichert</span>
       </div>
     </div>
+
     <div class="sim">
       <strong>Lasermesser (Simulation)</strong>
       <div class="win-row">
+        <select data-role="sim-device">
+          <option>BOSCH GLM (Sim)</option>
+          <option>LEICA DISTO (Sim)</option>
+        </select>
         <label class="inline-checkbox-item"><input type="checkbox" data-role="sim-enabled" /> aktivieren</label>
         <button type="button" class="btn" data-action="sim-breite" disabled>Messen Breite</button>
         <button type="button" class="btn" data-action="sim-hoehe" disabled>Messen Höhe</button>
         <button type="button" class="btn" data-action="sim-stream" disabled>Live-Stream 1 s</button>
-        <small>Simulation wird in Schritt 3 aktiviert.</small>
+        <span class="muted" data-role="sim-out"></span>
       </div>
     </div>
   </div>`;
@@ -227,7 +243,7 @@ function wireWindow(div, data){
     return {x:(e.clientX-r.left)*canvas.width/r.width, y:(e.clientY-r.top)*canvas.height/r.height};
   }
   function start(e){ drawing=true; last=getPos(e); }
-  function move(e){ if(!drawing) return; const p=getPos(e); ctx.strokeStyle='#e6eef7'; ctx.lineWidth=Number(pen.value||3); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; }
+  function move(e){ if(!drawing) return; const p=getPos(e); ctx.strokeStyle='#111'; ctx.lineWidth=Number(pen.value||3); ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(p.x,p.y); ctx.stroke(); last=p; }
   function end(){ drawing=false; }
   canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
   canvas.addEventListener('touchstart', (e)=>{start(e); e.preventDefault();},{passive:false});
@@ -235,6 +251,46 @@ function wireWindow(div, data){
   canvas.addEventListener('touchend', end);
   div.querySelector('[data-action="sketch-clear"]').addEventListener('click', ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); status.textContent='geleert (nicht gespeichert)'; saveState(); });
   div.querySelector('[data-action="sketch-save"]').addEventListener('click', ()=>{ status.textContent='gespeichert'; saveState(); });
+
+  // Laser-Simulation
+  const en = div.querySelector('[data-role="sim-enabled"]');
+  const out = div.querySelector('[data-role="sim-out"]');
+  const bBtn = div.querySelector('[data-action="sim-breite"]');
+  const hBtn = div.querySelector('[data-action="sim-hoehe"]');
+  const sBtn = div.querySelector('[data-action="sim-stream"]');
+  en.addEventListener('change', ()=>{
+    const active = en.checked;
+    bBtn.disabled = hBtn.disabled = sBtn.disabled = !active;
+    out.textContent = active ? 'Simulation aktiv' : '';
+  });
+  bBtn.addEventListener('click', async ()=>{
+    const val = await simulateMeasure(800, 2400); // Breite typischer
+    div.querySelector(`[name="w_breite_${div.dataset.winId}"]`).value = val;
+    out.textContent = `Breite: ${val} mm`;
+    buzz(); saveState();
+  });
+  hBtn.addEventListener('click', async ()=>{
+    const val = await simulateMeasure(900, 2600);
+    div.querySelector(`[name="w_hoehe_${div.dataset.winId}"]`).value = val;
+    out.textContent = `Höhe: ${val} mm`;
+    buzz(); saveState();
+  });
+  sBtn.addEventListener('click', async ()=>{
+    out.textContent = 'Live…';
+    const samples = 5, dt = 200;
+    let last = null;
+    for (let i=0;i<samples;i++){
+      last = await simulateMeasure(700, 2800, true);
+      out.textContent = `Live: ${last} mm`;
+      await sleep(dt);
+    }
+    out.textContent = `Übernommen: ${last} mm`;
+    // setze auf Breite, wenn leer – sonst Höhe
+    const bEl = div.querySelector(`[name="w_breite_${div.dataset.winId}"]`);
+    const hEl = div.querySelector(`[name="w_hoehe_${div.dataset.winId}"]`);
+    if (!bEl.value) bEl.value = last; else hEl.value = last;
+    buzz(); saveState();
+  });
 
   // Prefill
   if (data){
@@ -248,7 +304,7 @@ function wireWindow(div, data){
     div.querySelector(`[name="w_opt_schutz_${id}"]`).checked = !!(data.optionen&&data.optionen.schutz);
     div.querySelector(`[name="w_opt_abs_${id}"]`).checked = !!(data.optionen&&data.optionen.abschliessbar);
     (data.fotos||[]).forEach(u=> addThumb(thumbs, u));
-    if (data.skizze){ const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); status.textContent='gespeichert'; }; img.src=data.skizze; }
+    if (data.skizze){ const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); }; img.src=data.skizze; }
   }
 }
 function exportRooms(){
@@ -304,6 +360,16 @@ function compressImage(file, maxDim=1400, quality=0.85){
     fr.onerror = reject; fr.readAsDataURL(file);
   });
 }
+// Helpers
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+function buzz(){ if ('vibrate' in navigator) navigator.vibrate(15); }
+async function simulateMeasure(min=400, max=3000, jitterOnly=false){
+  // Grundwert ~ gleichverteilt, plus Toleranz ±2 mm
+  const base = Math.round(min + Math.random() * (max-min));
+  const tol = Math.round((Math.random()*4)-2); // -2..+2
+  const val = base + (jitterOnly ? Math.round((Math.random()*2)-1) : tol);
+  return Math.max(min, Math.min(max, val));
+}
 
 // Testdaten
 function fillDemo(){
@@ -317,10 +383,9 @@ function fillDemo(){
   document.querySelector('[name="glas"][value="3-fach"]').checked = true;
   document.querySelector('[name="fba"][value="Ja"]').checked = true;
   // Empfänger (TEST)
-  document.getElementById('empfaengerToggle').checked = true;
-  document.getElementById('empfaengerBlock').style.display = '';
   set('empf_name','Frau Erika Beispiel (TEST)'); set('empf_tel','0711 98765');
   set('empf_strasse','Am Park 5'); set('empf_plz','70372'); set('empf_ort','Stuttgart-Bad Cannstatt');
+  syncEmpfReadonly();
   // Raum+Fenster
   raeumeContainer.innerHTML=''; const room = addRoom('Wohnzimmer'); const body = room.querySelector('.room-body');
   const w1 = addWindow(body); const w2 = addWindow(body);
@@ -337,7 +402,26 @@ function fillDemo(){
 }
 document.getElementById('fillDemoBtn')?.addEventListener('click', fillDemo);
 
-// Submit / Drucken
+// Guided Demo: führt in 3 Klicks durch
+document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
+  fillDemo();
+  // Schritt 1 -> 2
+  flash(document.getElementById('btnToAuftragsdaten')); await sleep(700);
+  document.getElementById('btnToAuftragsdaten').click();
+  // Schritt 2 -> 3
+  flash(document.getElementById('btnToFensterbereich')); await sleep(700);
+  document.getElementById('btnToFensterbereich').click();
+  // Raum anlegen
+  flash(document.getElementById('addRaumBtn')); await sleep(700);
+  if (!raeumeContainer.querySelector('.room')) document.getElementById('addRaumBtn').click();
+  // Fenster hinzufügen
+  const roomBody = raeumeContainer.querySelector('.room .room-body');
+  const addBtn = raeumeContainer.querySelector('.room [data-action="add-window"]');
+  flash(addBtn); await sleep(700); addBtn.click();
+});
+function flash(el){ if(!el) return; el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1000); }
+
+// Submit / Drucken -> echte PDF
 document.getElementById('aufmassForm')?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   document.getElementById('loadingBar').style.display='';
@@ -352,7 +436,7 @@ document.getElementById('aufmassForm')?.addEventListener('submit', async (e)=>{
 document.getElementById('newAufmassBtn')?.addEventListener('click', ()=>{ location.reload(); });
 document.getElementById('printBtn')?.addEventListener('click', async ()=>{ await openPdfPreview(); });
 
-// ECHTE PDF
+// PDF Hook
 async function openPdfPreview(){
   if (!window.PDFLib) { alert('PDF-Bibliothek nicht geladen. Prüfe vendor/pdf-lib.min.js'); return; }
   const data = collectAllData();
@@ -367,7 +451,10 @@ function collectAllData(){
     kundendaten: {
       firma: obj.firma || '', name: obj.name || '', strasse: obj.strasse||'', plz: obj.plz||'', ort: obj.ort||'',
       telefon: obj.telefon||'', email: obj.email||'',
-      empfaenger: (document.getElementById('empfaengerToggle').checked ? { name: obj.empf_name||'', tel: obj.empf_tel||'', strasse: obj.empf_strasse||'', plz: obj.empf_plz||'', ort: obj.empf_ort||'' } : null)
+      empfaenger: { // in der Demo immer als TEST im PDF
+        name: obj.empf_name||'Empfänger (TEST)', tel: obj.empf_tel||'',
+        strasse: obj.empf_strasse||'', plz: obj.empf_plz||'', ort: obj.empf_ort||''
+      }
     },
     auftragsdaten: {
       gebaeudeart: (form.querySelector('input[name="gebaeudeart"]:checked')||{}).value || '',
@@ -381,5 +468,5 @@ function collectAllData(){
   };
 }
 
-// Initial
+// Init
 loadState();
