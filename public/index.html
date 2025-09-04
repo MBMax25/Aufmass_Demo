@@ -1,75 +1,191 @@
 <!doctype html>
-<span id="farbeSwatches" class="swatches" aria-hidden="true"></span>
-</div>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Aufmaß – Demo PWA</title>
+  <meta name="description" content="Aufmaß-Lösung für Fensterbauer – Demo PWA (clientseitige PDF-Erstellung, offlinefähige App-Shell, API-ready)." />
 
+  <!-- PWA basics -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0ea5e9" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="apple-touch-icon" href="assets/icons/icon-192-maskable.png" />
 
-<div class="section-divider"></div>
+  <!-- Favicon -->
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
 
+  <!-- Styles -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="assets/logo.svg" alt="Logo" onerror="this.src='assets/logo@2x.png'" />
+      <div class="app-title">Aufmaß&nbsp;–&nbsp;Demo PWA</div>
+    </div>
+    <div class="header-actions">
+      <span id="connectionBadge" class="badge badge-online" title="Verbindungsstatus">Online</span>
+      <button id="installBtn" class="btn btn-secondary" hidden>Installieren</button>
+      <button id="fillDemoBtn" class="btn btn-ghost" title="Formular mit Testdaten füllen">Testdaten</button>
+      <button id="printBtn" class="btn btn-primary" title="PDF-Vorschau öffnen">Drucken/Speichern</button>
+    </div>
+  </header>
 
-<div class="row-inline">
-<label style="flex:none;"><span>Glas:</span></label>
-<label class="inline-radio-item"><input type="radio" name="glas" value="1:1" /> 1:1</label>
-<label class="inline-radio-item"><input type="radio" name="glas" value="3-fach" /> 3-fach</label>
-</div>
+  <main class="container">
+    <!-- Info-Hinweis (API-ready) -->
+    <aside class="info-banner" role="note">
+      <strong>API-ready:</strong> Diese Demo ist voll clientseitig. Anbindungen (ERP/CRM/Docs)
+      sind vorbereitet, aber deaktiviert.
+    </aside>
 
+    <div class="form-wrapper">
+      <form id="aufmassForm">
+        <!-- Schritt 1: Kundendaten -->
+        <fieldset id="kundendaten">
+          <legend>Kundendaten</legend>
 
-<div class="section-divider"></div>
+          <label><span>Firma:</span><input type="text" id="firma" name="firma" /></label>
 
+          <div id="nameContainer">
+            <label><span>Name:</span><input type="text" name="name" /></label>
+          </div>
 
-<div class="row-inline">
-<label style="flex:none;"><span>FBA:</span></label>
-<label class="inline-radio-item"><input type="radio" name="fba" value="Ja" /> Ja</label>
-<label class="inline-radio-item"><input type="radio" name="fba" value="Nein" /> Nein</label>
-</div>
+          <!-- Empfänger (Kunde des Kunden) optional -->
+          <div class="section-divider"></div>
+          <div class="row-inline">
+            <label class="inline-checkbox-item">
+              <input type="checkbox" id="empfaengerToggle" /> Empfänger (Kunde des Kunden) erfassen
+            </label>
+          </div>
+          <div id="empfaengerBlock" class="card" style="display:none;">
+            <div class="card-title">Empfänger (TEST)</div>
+            <div class="row-inline">
+              <label style="flex:2;"><span>Empfänger – Name:</span><input type="text" name="empf_name" /></label>
+              <label style="flex:1;"><span>Empfänger – Telefon:</span><input type="text" name="empf_tel" /></label>
+            </div>
+            <div class="row-inline">
+              <label style="flex:2;"><span>Straße:</span><input type="text" name="empf_strasse" /></label>
+              <label style="flex:1;"><span>PLZ:</span><input type="text" name="empf_plz" /></label>
+              <label style="flex:1;"><span>Ort:</span><input type="text" name="empf_ort" /></label>
+            </div>
+          </div>
 
+          <div class="section-divider"></div>
 
-<div class="row-inline">
-<button type="button" id="btnBackToKundendaten">Zurück</button>
-<button type="button" id="btnToFensterbereich">Weiter</button>
-</div>
-</fieldset>
+          <div id="zusatzfelder" style="display:none;">
+            <div class="row-inline">
+              <label><span>Ansprechpartner:</span><input type="text" name="ansprechpartner" /></label>
+              <label><span>Kommission:</span><input type="text" name="kommission" /></label>
+            </div>
+          </div>
 
+          <div class="row-inline">
+            <label style="flex:2;"><span>Straße:</span><input type="text" name="strasse" /></label>
+            <label style="flex:1;"><span>PLZ:</span><input type="text" name="plz" /></label>
+            <label style="flex:1;"><span>Ort:</span><input type="text" name="ort" /></label>
+          </div>
 
-<!-- Schritt 3: Fensteraufmaß -->
-<fieldset id="fensterbereich" style="display:none;">
-<legend>Fensteraufmaß</legend>
+          <div class="row-inline">
+            <label style="flex:1;"><span>Telefon:</span><input type="text" name="telefon" /></label>
+            <label style="flex:1;"><span>E-Mail:</span><input type="email" name="email" /></label>
+          </div>
 
+          <div class="row-inline">
+            <button type="button" id="btnToAuftragsdaten">Weiter</button>
+          </div>
+        </fieldset>
 
-<div id="raeumeContainer"></div>
-<button type="button" class="add-btn" id="addRaumBtn">+ Raum hinzufügen</button>
+        <!-- Schritt 2: Auftragsdaten -->
+        <fieldset id="auftragsdaten" style="display:none;">
+          <legend>Auftragsdaten</legend>
 
+          <div class="row-inline">
+            <label style="flex:none;"><span>Gebäudeart:</span></label>
+            <label class="inline-radio-item"><input type="radio" name="gebaeudeart" value="Neubau" /> Neubau</label>
+            <label class="inline-radio-item"><input type="radio" name="gebaeudeart" value="Altbau" /> Altbau</label>
+          </div>
 
-<div class="row-inline" style="justify-content:flex-start; margin-top:1.5em;">
-<button type="button" id="btnBackToAuftragsdaten">Zurück</button>
-<button type="submit" id="submitButton">Absenden</button>
-</div>
+          <div class="section-divider"></div>
 
+          <div class="row-inline">
+            <label style="flex:none;"><span>Material:</span></label>
+            <label class="inline-radio-item"><input type="radio" name="material" value="Holz" /> Holz</label>
+            <label class="inline-radio-item"><input type="radio" name="material" value="Kunststoff" /> Kunststoff</label>
+            <label class="inline-radio-item"><input type="radio" name="material" value="Alu" /> Alu</label>
+          </div>
 
-<div id="loadingBar" style="display:none; text-align:center; margin-top:1.5em;">
-⏳ Aufmaßprotokoll wird erstellt …
-</div>
-</fieldset>
-</form>
+          <div class="section-divider"></div>
 
+          <div class="row-inline">
+            <label style="flex:none;"><span>Farbe:</span></label>
+            <select name="farbe" id="farbeSelect">
+              <option value="Anthrazit">Anthrazit</option>
+              <option value="Weiß">Weiß</option>
+              <option value="Grau">Grau</option>
+              <option value="Sonstige">Sonstige</option>
+            </select>
+            <input type="text" name="farbeSonstige" id="farbeSonstige" placeholder="Farbname" style="display:none; width:auto;" />
+            <span id="farbeSwatches" class="swatches" aria-hidden="true"></span>
+          </div>
 
-<!-- Abschlussseite -->
-<div id="abschlussSeite" style="display:none; text-align:center; margin-top:2em;">
-<h2>✅ Aufmaß erfolgreich erfasst</h2>
-<p>PDF wird in einem neuen Tab geöffnet (Demo-Modus).</p>
-<img src="https://cdn-icons-png.flaticon.com/512/553/553416.png" width="140" alt="Erfolg" style="margin-top:1em;" />
-<br /><br />
-<button type="button" id="newAufmassBtn">Weiteres Aufmaß erstellen</button>
-</div>
-</div>
-</main>
+          <div class="section-divider"></div>
 
+          <div class="row-inline">
+            <label style="flex:none;"><span>Glas:</span></label>
+            <label class="inline-radio-item"><input type="radio" name="glas" value="1:1" /> 1:1</label>
+            <label class="inline-radio-item"><input type="radio" name="glas" value="3-fach" /> 3-fach</label>
+          </div>
 
-<noscript>
-Bitte JavaScript aktivieren – diese Demo benötigt JS.
-</noscript>
+          <div class="section-divider"></div>
 
+          <div class="row-inline">
+            <label style="flex:none;"><span>FBA:</span></label>
+            <label class="inline-radio-item"><input type="radio" name="fba" value="Ja" /> Ja</label>
+            <label class="inline-radio-item"><input type="radio" name="fba" value="Nein" /> Nein</label>
+          </div>
 
-<script src="app.js" defer></script>
-<script src="pdf.js" defer></script>
+          <div class="row-inline">
+            <button type="button" id="btnBackToKundendaten">Zurück</button>
+            <button type="button" id="btnToFensterbereich">Weiter</button>
+          </div>
+        </fieldset>
+
+        <!-- Schritt 3: Fensteraufmaß -->
+        <fieldset id="fensterbereich" style="display:none;">
+          <legend>Fensteraufmaß</legend>
+
+          <div id="raeumeContainer"></div>
+          <button type="button" class="add-btn" id="addRaumBtn">+ Raum hinzufügen</button>
+
+          <div class="row-inline" style="justify-content:flex-start; margin-top:1.5em;">
+            <button type="button" id="btnBackToAuftragsdaten">Zurück</button>
+            <button type="submit" id="submitButton">Absenden</button>
+          </div>
+
+          <div id="loadingBar" style="display:none; text-align:center; margin-top:1.5em;">
+            ⏳ Aufmaßprotokoll wird erstellt …
+          </div>
+        </fieldset>
+      </form>
+
+      <!-- Abschlussseite -->
+      <div id="abschlussSeite" style="display:none; text-align:center; margin-top:2em;">
+        <h2>✅ Aufmaß erfolgreich erfasst</h2>
+        <p>PDF wird in einem neuen Tab geöffnet (Demo-Modus).</p>
+        <img src="https://cdn-icons-png.flaticon.com/512/553/553416.png" width="140" alt="Erfolg" style="margin-top:1em;" />
+        <br /><br />
+        <button type="button" id="newAufmassBtn">Weiteres Aufmaß erstellen</button>
+      </div>
+    </div>
+  </main>
+
+  <noscript>
+    Bitte JavaScript aktivieren – diese Demo benötigt JS.
+  </noscript>
+
+  <script src="app.js" defer></script>
+  <script src="pdf.js" defer></script>
 </body>
 </html>
