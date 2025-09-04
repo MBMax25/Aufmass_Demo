@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aufmass-demo-shell-v3';
+const CACHE_NAME = 'aufmass-demo-shell-v4';
 const ASSETS = [
   'index.html','styles.css','app.js','pdf.js',
   'vendor/pdf-lib.min.js',
