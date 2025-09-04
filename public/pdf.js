@@ -11,37 +11,24 @@ async function createPdfAndOpen(data){
   const fontR = await doc.embedFont(StandardFonts.Helvetica);
   const fontB = await doc.embedFont(StandardFonts.HelveticaBold);
 
-  // Logo (PNG empfohlen)
-  let logoImg = null;
-  try {
-    const res = await fetch('assets/logo@2x.png');
-    if (res.ok) {
-      const bytes = await res.arrayBuffer();
-      // versuchen PNG, fallback JPG
-      try { logoImg = await doc.embedPng(bytes); } catch { logoImg = await doc.embedJpg(bytes); }
-    }
-  } catch {}
+  // Logo laden: bevorzugt PNG, sonst SVG -> Canvas -> PNG
+  const logoBytes = await loadLogoPngBytes();
+  const logoImg = logoBytes ? await doc.embedPng(logoBytes) : null;
 
   // Seiten-Verwaltung
   let page = doc.addPage([A4.w, A4.h]);
   let y = A4.h - MARGIN;
   let pageNo = 1;
-  const pagesForFooter = [];
 
   function newPage(){
-    drawFooter(page, pageNo);
-    pagesForFooter.push(page);
-    page = doc.addPage([A4.w, A4.h]);
-    pageNo++; y = A4.h - MARGIN;
+    drawFooter(page, pageNo); page = doc.addPage([A4.w, A4.h]); pageNo++; y = A4.h - MARGIN;
   }
-  function ensure(h){
-    if (y - h < MARGIN + 24) newPage(); // 24pt Footer-Raum
-  }
+  function ensure(h){ if (y - h < MARGIN + 24) newPage(); }
   function text(txt, x, yPos, opts={}){
     const { size=10, font=fontR, color=rgb(0,0,0) } = opts;
     page.drawText(String(txt ?? ''), { x, y: yPos, size, font, color });
   }
-  function line(x1,y1,x2,y2,color=rgb(0.85,0.85,0.9)){ page.drawLine({ start:{x:x1,y:y1}, end:{x:x2,y:y2}, color, thickness:1 }); }
+  function line(x1,y1,x2,y2,color=rgb(0.86,0.86,0.9)){ page.drawLine({ start:{x:x1,y:y1}, end:{x:x2,y:y2}, color, thickness:1 }); }
   function wrap(txt, maxW, size=10, font=fontR){
     const words = String(txt||'').split(/\s+/);
     const lines=[]; let cur='';
@@ -54,10 +41,10 @@ async function createPdfAndOpen(data){
     return lines;
   }
   function badge(x, yPos, label, opts={}) {
-    const { fill=rgb(0.06,0.65,0.38), padX=6, padY=3, size=9 } = opts;
+    const { fill=rgb(1,0.59,0.2), padX=6, padY=3, size=9 } = opts; // orange
     const w = fontB.widthOfTextAtSize(label, size) + padX*2;
     const h = size + padY*2;
-    page.drawRectangle({ x, y: yPos - h + 2, width: w, height: h, color: fill, opacity: 0.9 });
+    page.drawRectangle({ x, y: yPos - h + 2, width: w, height: h, color: fill, opacity: 0.95 });
     page.drawText(label, { x: x+padX, y: yPos - size, size, font: fontB, color: rgb(1,1,1) });
     return w;
   }
@@ -65,19 +52,18 @@ async function createPdfAndOpen(data){
     const size=13;
     ensure(26);
     y -= 10;
-    text(title, MARGIN, y, { size, font: fontB, color: rgb(0.09,0.45,0.8) });
+    text(title, MARGIN, y, { size, font: fontB, color: rgb(0.08,0.35,0.75) });
     y -= 6;
-    line(MARGIN, y, MARGIN+CONTENT_W, y, rgb(0.7,0.78,0.9));
+    line(MARGIN, y, MARGIN+CONTENT_W, y, rgb(0.85,0.85,0.9));
     y -= 10;
   }
   function keyVal(label, val, colX, colW){
     const labelSize = 9, valSize=10;
     const lw = Math.min(110, colW*0.35);
-    text(label, colX, y, { size: labelSize, font: fontB, color: rgb(0.2,0.25,0.35) });
+    ensure(14);
+    text(label, colX, y, { size: labelSize, font: fontB, color: rgb(0.25,0.28,0.35) });
     const lines = wrap(val, colW - lw - 8, valSize);
     const h = Math.max(14, lines.length * (valSize+2));
-    ensure(h);
-    // value
     let yy = y;
     for (const ln of lines){ text(ln, colX+lw+8, yy, { size: valSize }); yy -= (valSize+2); }
     y -= h + 2;
@@ -87,31 +73,35 @@ async function createPdfAndOpen(data){
   (function header(){
     const title = 'Aufmaß – DEMO';
     const dateStr = new Date().toLocaleDateString('de-DE');
-    const headH = 54;
+    const headH = 60;
     ensure(headH);
 
     // Logo links
-    let lx = MARGIN, lw = 0, lh = 0;
+    let lx = MARGIN;
     if (logoImg){
-      lw = Math.min(120, logoImg.width); lh = logoImg.height * (lw / logoImg.width);
-      page.drawImage(logoImg, { x:MARGIN, y:y - lh + 8, width: lw, height: lh });
-      lx = MARGIN + lw + 12;
+      const maxW = 150;
+      const w = Math.min(maxW, logoImg.width);
+      const h = logoImg.height * (w / logoImg.width);
+      page.drawImage(logoImg, { x:MARGIN, y:y - h + 8, width: w, height: h });
+      lx = MARGIN + w + 12;
     }
 
-    // Titel rechts vom Logo
+    // Titel / Datum
     text(title, lx, y, { size:16, font: fontB });
     text(`Datum: ${dateStr}`, lx, y-18, { size:10, font: fontR, color: rgb(0.25,0.3,0.4) });
 
-    y -= headH - 8;
+    y -= headH - 6;
 
-    // Auftraggeber + Empfänger in zwei Spalten
+    // Auftraggeber + Empfänger
     const leftW = (CONTENT_W - 12)/2;
-    const rightW = leftW;
+    const kd = data.kundendaten || {};
+    const emp = kd.empfaenger;
+
     // Links: Auftraggeber (TESTKUNDE)
     let yStart = y;
-    text('Auftraggeber', MARGIN, y, { size:11, font:fontB }); const bw = badge(MARGIN+90, y+9, 'TESTKUNDE', { fill: rgb(0.91,0.45,0.1) });
+    text('Auftraggeber', MARGIN, y, { size:11, font:fontB });
+    badge(MARGIN+90, y+9, 'TESTKUNDE', { fill: rgb(0.95,0.55,0.18) });
     y -= 16;
-    const kd = data.kundendaten || {};
     const l0 = [
       ['Firma', kd.firma || ''],
       ['Name', kd.name || ''],
@@ -126,22 +116,17 @@ async function createPdfAndOpen(data){
 
     // Rechts: Empfänger (TEST)
     y = yStart;
-    const emp = kd.empfaenger;
     text('Empfänger', MARGIN+leftW+12, y, { size:11, font:fontB });
-    badge(MARGIN+leftW+12+70, y+9, 'TEST', { fill: rgb(0.15,0.65,0.9) });
+    badge(MARGIN+leftW+12+70, y+9, 'TEST', { fill: rgb(0.18,0.6,0.95) });
     y -= 16;
-    if (emp){
-      const r0 = [
-        ['Name', emp.name || ''],
-        ['Telefon', emp.tel || ''],
-        ['Straße', emp.strasse || ''],
-        ['PLZ/Ort', `${emp.plz||''} ${emp.ort||''}`.trim()]
-      ];
-      for (const [k,v] of r0){ keyVal(k, v, MARGIN+leftW+12, rightW); }
-    } else {
-      keyVal('Hinweis', 'Kein Empfänger erfasst.', MARGIN+leftW+12, rightW);
-    }
-    // Unterkante beider Spalten angleichen
+    const r0 = emp ? [
+      ['Name', emp.name || ''],
+      ['Telefon', emp.tel || ''],
+      ['Straße', emp.strasse || ''],
+      ['PLZ/Ort', `${emp.plz||''} ${emp.ort||''}`.trim()]
+    ] : [['Hinweis','Kein Empfänger erfasst.']];
+    for (const [k,v] of r0){ keyVal(k, v, MARGIN+leftW+12, leftW); }
+
     y = Math.min(yLeftEnd, y);
     y -= 8;
   })();
@@ -157,19 +142,16 @@ async function createPdfAndOpen(data){
     ['FBA', ad.fba || '']
   ];
   const twoColW = (CONTENT_W - 12)/2;
-  // zeichne in zwei Spalten
   let yAdStart = y;
   for (let i=0;i<adPairs.length;i+=2){
-    // linke Spalte
     const [k1,v1] = adPairs[i];
     keyVal(k1, v1, MARGIN, twoColW);
     const yAfterLeft = y;
-    // rechte Spalte (falls vorhanden)
     if (adPairs[i+1]){
       y = yAdStart;
       const [k2,v2] = adPairs[i+1];
       keyVal(k2, v2, MARGIN+twoColW+12, twoColW);
-      yAdStart = y; // kleiner von beiden
+      yAdStart = y;
       y = Math.min(yAfterLeft, y);
     } else {
       y = yAfterLeft;
@@ -183,81 +165,58 @@ async function createPdfAndOpen(data){
   for (const room of rooms){
     sectionTitle(`Raum: ${room.name || ''}`);
     const windows = Array.isArray(room.fenster) ? room.fenster : [];
-    if (!windows.length){
-      keyVal('Hinweis', 'Keine Fenster erfasst.', MARGIN, CONTENT_W);
-      continue;
-    }
+    if (!windows.length){ keyVal('Hinweis', 'Keine Fenster erfasst.', MARGIN, CONTENT_W); continue; }
 
     for (const w of windows){
-      // window card metrics
-      const cardPad = 8, gap=6;
-      const cardTop = y;
-      // Schätze Mindesthöhe ohne Bilder
       ensure(110);
 
-      // Rahmen
-      const cardW = CONTENT_W;
-      const cardHmin = 110; // Mindesthöhe
-      // Wir zeichnen Inhalte und passen y nach Bildern an
-
-      // Titelzeile
-      text(w.bezeichnung || 'Fenster', MARGIN+cardPad, y, { size:11, font:fontB });
+      // Überschrift
+      text(w.bezeichnung || 'Fenster', MARGIN, y, { size:11, font:fontB });
       y -= 14;
 
-      // Metadaten
-      const mLeftW = (CONTENT_W - 12)/2;
-      keyVal('Maße (mm)', `${w.breite_mm||'–'} × ${w.hoehe_mm||'–'}`, MARGIN+cardPad, mLeftW - cardPad);
+      // Maße / Öffnungsart / Optionen (2 Spalten)
+      const colW = (CONTENT_W - 12)/2;
+      keyVal('Maße (mm)', `${w.breite_mm||'–'} × ${w.hoehe_mm||'–'}`, MARGIN, colW);
       const yAfterLeft = y;
-      y = cardTop - 14; // neben Titel starten
-      keyVal('Öffnungsart', w.art || '–', MARGIN+cardPad+mLeftW+12, mLeftW - cardPad);
-      // Optionen in eine Zeile
+      y += 14; // zurück für parallelen Block
+      keyVal('Öffnungsart', w.art || '–', MARGIN+colW+12, colW);
       const opts = [];
       if (w.optionen?.struktur) opts.push('Struktur');
       if (w.optionen?.dav) opts.push('Druckausgleichventil');
       if (w.optionen?.schutz) opts.push('Schallschutz');
       if (w.optionen?.abschliessbar) opts.push('Abschließbar');
       const optStr = opts.length ? opts.join(', ') : '–';
-      keyVal('Optionen', optStr, MARGIN+cardPad+mLeftW+12, mLeftW - cardPad);
+      keyVal('Optionen', optStr, MARGIN+colW+12, colW);
       y = Math.min(yAfterLeft, y);
       y -= 4;
 
-      // Bilder (Fotos + Skizze) in Grid (max 3 pro Zeile)
-      const imgs = [];
-      (w.fotos||[]).forEach(u=> imgs.push(u));
-      if (w.skizze) imgs.push(w.skizze);
+      // Bilder (Fotos + Skizze)
+      const imgs = []; (w.fotos||[]).forEach(u=> imgs.push(u)); if (w.skizze) imgs.push(w.skizze);
       if (imgs.length){
-        const perRow = 3;
-        const gapX = 8;
-        const thumbW = Math.floor((CONTENT_W - cardPad*2 - gapX*(perRow-1)) / perRow);
+        const perRow = 3, gapX = 8;
+        const thumbW = Math.floor((CONTENT_W - gapX*(perRow-1)) / perRow);
         const thumbH = Math.floor(thumbW * 0.66);
-
         for (let i=0;i<imgs.length;i++){
-          const col = i % perRow, row = Math.floor(i/perRow);
+          const col = i % perRow;
           if (col === 0){ ensure(thumbH + 6); }
-          const x = MARGIN+cardPad + col*(thumbW + gapX);
-          const yImgTop = y;
-          // Daten-URL -> Bytes
+          const x = MARGIN + col*(thumbW + gapX);
           const isPng = imgs[i].startsWith('data:image/png');
           const bytes = dataUrlToBytes(imgs[i]);
           const img = isPng ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
           const scale = Math.min(thumbW / img.width, thumbH / img.height);
           const wpt = img.width * scale, hpt = img.height * scale;
           page.drawImage(img, { x, y: y - hpt, width: wpt, height: hpt });
-          // nächste Spalte
-          if (col === perRow-1 || i === imgs.length-1){
-            y -= (thumbH + 6);
-          }
+          if (col === perRow-1 || i === imgs.length-1){ y -= (thumbH + 6); }
         }
       }
-
-      // dünne Trennlinie
-      y -= 4; line(MARGIN, y, MARGIN+CONTENT_W, y, rgb(0.85,0.85,0.9)); y -= 6;
+      y -= 2;
+      line(MARGIN, y, MARGIN+CONTENT_W, y, rgb(0.86,0.86,0.9));
+      y -= 6;
     }
   }
 
-  // Footer letzte Seite
+  // Footer
   drawFooter(page, pageNo);
-  pagesForFooter.push(page);
 
   // Ausgabe
   const pdfBytes = await doc.save();
@@ -266,7 +225,37 @@ async function createPdfAndOpen(data){
   window.open(url, '_blank');
 }
 
-// ---- Helfer
+// ---- Logo Loader (PNG bevorzugt, SVG Fallback via Canvas)
+async function loadLogoPngBytes(){
+  try {
+    // PNG
+    const res = await fetch('assets/logo@2x.png', { cache:'no-cache' });
+    if (res.ok) return new Uint8Array(await res.arrayBuffer());
+  } catch {}
+  try {
+    // SVG -> Canvas -> PNG
+    const res = await fetch('assets/logo.svg', { cache:'no-cache' });
+    if (!res.ok) return null;
+    const svgText = await res.text();
+    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgText);
+    const img = await loadImage(dataUrl);
+    const canvas = document.createElement('canvas');
+    const targetW = 500; // Rasterbreite
+    const scale = targetW / img.width;
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height); // weißer BG für Sichtbarkeit
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const pngUrl = canvas.toDataURL('image/png', 1);
+    return dataUrlToBytes(pngUrl);
+  } catch {
+    return null;
+  }
+}
+function loadImage(url){
+  return new Promise((resolve,reject)=>{ const img=new Image(); img.onload=()=>resolve(img); img.onerror=reject; img.src=url; });
+}
 function dataUrlToBytes(dataUrl){
   const comma = dataUrl.indexOf(',');
   const b64 = dataUrl.substring(comma+1);
@@ -276,17 +265,11 @@ function dataUrlToBytes(dataUrl){
   for (let i=0;i<len;i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
-
 function drawFooter(page, pageNo){
-  const { rgb, StandardFonts } = PDFLib;
-  const fontSize = 9;
+  const { rgb } = PDFLib;
   const margin = 36;
-  const text = 'API-ready • Automatisierungen möglich';
-  const w = page.getWidth();
-  const ctx = page.doc; // not used
-  // Linke Fußnote
-  page.drawText(text, { x: margin, y: 18, size: fontSize, font: page.node.doc.context.standardFont || undefined, color: rgb(0.35,0.4,0.5) });
-  // Rechte Seitenzahl
+  page.drawText('API-ready • Automatisierungen möglich', { x: margin, y: 18, size: 9, color: rgb(0.35,0.4,0.5) });
   const s = `Seite ${pageNo}`;
-  page.drawText(s, { x: w - margin - 60, y: 18, size: fontSize, color: rgb(0.35,0.4,0.5) });
+  const w = page.getWidth();
+  page.drawText(s, { x: w - margin - 60, y: 18, size: 9, color: rgb(0.35,0.4,0.5) });
 }
