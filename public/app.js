@@ -41,10 +41,15 @@ connectionBadge?.addEventListener('click', ()=>{
 });
 updateOnlineStatus();
 
+// Animierter Hinweis neben „Demo starten“ (blendet nach 6s aus bzw. bei Klick)
+const demoHint = document.getElementById('demoHint');
+setTimeout(()=> demoHint?.classList.add('fade'), 6000);
+document.getElementById('demoGuideBtn')?.addEventListener('click', ()=> demoHint?.remove());
+
 // ---------------------------
 // State-Persistenz
 // ---------------------------
-const FORM_KEY = 'aufmass-demo-form-v6';
+const FORM_KEY = 'aufmass-demo-form-v7';
 const MAX_PHOTOS = 3;
 
 function saveState(){
@@ -291,24 +296,25 @@ function wireWindow(div, data){
     div.querySelector(`[name="w_opt_schutz_${id}"]`).checked = !!(data.optionen&&data.optionen.schutz);
     div.querySelector(`[name="w_opt_abs_${id}"]`).checked = !!(data.optionen&&data.optionen.abschliessbar);
     (data.fotos||[]).forEach(u=> addPhotoToWin(div, u));
-    if (data.skizze){ const img=new Image(); img.onload=()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height); }; img.src=data.skizze; }
   }
 }
 function enhanceChoiceStyling(scope){
-  const toggle = (input)=>{
+  const toggle = (input, animate=false)=>{
     const label = input.closest('.inline-radio-item, .inline-checkbox-item');
     if (!label) return;
     if (input.type === 'radio'){
       scope.querySelectorAll(`input[name="${input.name}"]`).forEach(i=>{
-        i.closest('.inline-radio-item')?.classList.remove('is-checked');
+        i.closest('.inline-radio-item')?.classList.remove('is-checked','bling');
       });
-      if (input.checked) label.classList.add('is-checked');
+      if (input.checked) { label.classList.add('is-checked'); if (animate){ label.classList.add('bling'); setTimeout(()=>label.classList.remove('bling'), 260);} }
     } else if (input.type === 'checkbox'){
       label.classList.toggle('is-checked', input.checked);
+      if (animate){ label.classList.add('bling'); setTimeout(()=>label.classList.remove('bling'), 260); }
     }
   };
   scope.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(i=>{
-    toggle(i); i.addEventListener('change', ()=>toggle(i));
+    toggle(i);
+    i.addEventListener('change', ()=>toggle(i, true));
   });
 }
 function exportRooms(){
@@ -341,7 +347,7 @@ function exportRooms(){
   return rooms;
 }
 
-// Media helper (für Demo-Bilder)
+// Media helper
 function addPhotoToWin(winEl, dataUrl){
   const container = winEl.querySelector('[data-role="thumbs"]');
   if (!container) return;
@@ -379,6 +385,10 @@ async function simulateMeasure(min=400, max=3000, jitterOnly=false){
   const val = base + (jitterOnly ? Math.round((Math.random()*2)-1) : tol);
   return Math.max(min, Math.min(max, val));
 }
+function ensureVisible(el){
+  try { el?.scrollIntoView({behavior:'smooth', block:'center'}); } catch {}
+  if (el && el.classList){ el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1000); }
+}
 
 // Sample-Bilder als Canvas (offline)
 function sampleImage(text, w=800, h=530){
@@ -387,11 +397,18 @@ function sampleImage(text, w=800, h=530){
   g.fillStyle = '#e5e5ea'; g.fillRect(0,0,w,h);
   g.fillStyle = '#b0b0b8'; g.fillRect(20,20,w-40,h-40);
   g.fillStyle = '#111'; g.font = 'bold 42px -apple-system,Segoe UI,Roboto';
-  const m = g.measureText(text); g.fillText(text, (w-m.width)/2, h/2);
+  const m = g.measureText(text); g.fillText(text, (w-m.width)/2, Math.floor(h/2));
   return c.toDataURL('image/jpeg', 0.9);
 }
 
-// Testdaten (manuell)
+// Testdaten Toggle
+let demoFilled = false;
+function clearDemo(){
+  const form = document.getElementById('aufmassForm');
+  form.reset();
+  raeumeContainer.innerHTML='';
+  saveState();
+}
 function fillDemo(){
   const set = (name, val)=>{ const el=document.querySelector(`[name="${name}"]`); if(el) el.value=val; };
   set('firma','Musterbau GmbH (TESTKUNDE)'); set('name','Max Mustermann');
@@ -403,7 +420,7 @@ function fillDemo(){
   document.querySelector('[name="glas"][value="3-fach"]').checked = true;
   document.querySelector('[name="fba"][value="Ja"]').checked = true;
 
-  // Räume: Wohnzimmer (1 Fenster), Schlafzimmer (2 Fenster)
+  // Räume: Wohnzimmer (1), Schlafzimmer (2)
   raeumeContainer.innerHTML='';
   const r1 = addRoom('Wohnzimmer'); const b1 = r1.querySelector('.room-body');
   const w1 = addWindow(b1); const id1=w1.dataset.winId;
@@ -429,16 +446,27 @@ function fillDemo(){
 
   saveState();
 }
-document.getElementById('fillDemoBtn')?.addEventListener('click', fillDemo);
+const fillBtn = document.getElementById('fillDemoBtn');
+fillBtn?.addEventListener('click', ()=>{
+  if (!demoFilled){ fillDemo(); demoFilled = true; fillBtn.textContent = 'Testdaten entfernen'; fillBtn.setAttribute('aria-pressed','true'); }
+  else { clearDemo(); demoFilled = false; fillBtn.textContent = 'Testdaten'; fillBtn.setAttribute('aria-pressed','false'); }
+});
 
-// Geführte Demo: langsamer + visuelle Hervorhebung + PDF am Ende
+// Geführte Demo: langsamer + Fokus + Auto-Scroll + PDF in vorab geöffnetem Tab
 document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
+  // Sofort einen Tab öffnen (Popup-Blocker umgehen)
+  window.__pdfTarget = window.open('about:blank', '_blank');
+  if (window.__pdfTarget && !window.__pdfTarget.closed) {
+    try { window.__pdfTarget.document.write('<title>PDF Vorschau…</title><p style="font-family:sans-serif">PDF wird vorbereitet…</p>'); } catch {}
+  }
+
   // Reset
   localStorage.removeItem(FORM_KEY);
   document.getElementById('aufmassForm').reset();
   raeumeContainer.innerHTML='';
+  demoFilled = false; fillBtn.textContent='Testdaten'; fillBtn.setAttribute('aria-pressed','false');
 
-  const slow = 70; // Tippgeschwindigkeit (ms pro Zeichen)
+  const slow = 80; // Tippgeschwindigkeit
   await typeFill('[name="firma"]','Musterbau GmbH (TESTKUNDE)', slow);
   await typeFill('[name="name"]','Max Mustermann', slow);
   await typeFill('[name="strasse"]','Beispielweg 12', slow);
@@ -447,68 +475,74 @@ document.getElementById('demoGuideBtn')?.addEventListener('click', async ()=>{
   await typeFill('[name="telefon"]','0711123456', slow);
   await typeFill('[name="email"]','max@musterbau.example', slow);
 
-  flash(document.getElementById('btnToAuftragsdaten')); await sleep(600);
+  ensureVisible(document.getElementById('btnToAuftragsdaten'));
+  await sleep(500);
   document.getElementById('btnToAuftragsdaten').click();
 
-  selectAndFlash('input[name="gebaeudeart"][value="Altbau"]'); await sleep(400);
-  selectAndFlash('input[name="material"][value="Kunststoff"]'); await sleep(400);
-  document.getElementById('farbeSelect').value = 'Anthrazit'; updateFarbe(); flash(document.getElementById('farbeSelect')); await sleep(400);
-  selectAndFlash('input[name="glas"][value="3-fach"]'); await sleep(400);
-  selectAndFlash('input[name="fba"][value="Ja"]'); await sleep(500);
+  // Auswahl mit starker visueller Rückmeldung
+  await selectAndFlash('input[name="gebaeudeart"][value="Altbau"]');
+  await selectAndFlash('input[name="material"][value="Kunststoff"]');
+  document.getElementById('farbeSelect').value = 'Anthrazit'; updateFarbe();
+  ensureVisible(document.getElementById('farbeSelect')); await sleep(500);
+  await selectAndFlash('input[name="glas"][value="3-fach"]');
+  await selectAndFlash('input[name="fba"][value="Ja"]');
 
-  flash(document.getElementById('btnToFensterbereich')); await sleep(700);
+  ensureVisible(document.getElementById('btnToFensterbereich'));
+  await sleep(700);
   document.getElementById('btnToFensterbereich').click();
 
-  // Raum 1 (1 Fenster)
-  flash(document.getElementById('addRaumBtn')); await sleep(500);
-  const r1 = addRoom('Wohnzimmer'); const b1 = r1.querySelector('.room-body'); await sleep(400);
+  ensureVisible(document.getElementById('addRaumBtn')); await sleep(500);
+  const r1 = addRoom('Wohnzimmer'); const b1 = r1.querySelector('.room-body'); ensureVisible(r1); await sleep(400);
 
-  const w1 = addWindow(b1); const id1=w1.dataset.winId;
+  const w1 = addWindow(b1); const id1=w1.dataset.winId; ensureVisible(w1);
   await typeFill(`[name="w_bez_${id1}"]`,'Fenster links', slow);
   await typeFill(`[name="w_breite_${id1}"]`,'1200', slow);
   await typeFill(`[name="w_hoehe_${id1}"]`,'1400', slow);
-  w1.querySelector(`input[name="w_art_${id1}"][value="Drehkipp links"]`).checked = true; enhanceChoiceStyling(w1); flash(w1); await sleep(500);
+  await selectAndFlash(`input[name="w_art_${id1}"][value="Drehkipp links"]`, w1);
   // Laser kurz demonstrieren
-  const en = w1.querySelector('[data-role="sim-enabled"]'); en.click(); await sleep(250);
-  w1.querySelector('[data-action="sim-breite"]').click(); await sleep(300);
-  w1.querySelector('[data-action="sim-hoehe"]').click(); await sleep(400);
+  const en = w1.querySelector('[data-role="sim-enabled"]'); en.click(); ensureVisible(w1.querySelector('.sim')); await sleep(300);
+  w1.querySelector('[data-action="sim-breite"]').click(); await sleep(350);
+  w1.querySelector('[data-action="sim-hoehe"]').click(); await sleep(450);
   // Beispielbilder
-  addPhotoToWin(w1, sampleImage('Beispielbild 1')); await sleep(250);
-  addPhotoToWin(w1, sampleImage('Beispielbild 2')); await sleep(300);
+  addPhotoToWin(w1, sampleImage('Beispielbild 1')); await sleep(300);
+  addPhotoToWin(w1, sampleImage('Beispielbild 2')); await sleep(350);
 
-  // Raum 2 (2 Fenster)
-  const r2 = addRoom('Schlafzimmer'); const b2 = r2.querySelector('.room-body'); await sleep(400);
+  const r2 = addRoom('Schlafzimmer'); const b2 = r2.querySelector('.room-body'); ensureVisible(r2); await sleep(400);
 
-  const w2 = addWindow(b2); const id2=w2.dataset.winId;
+  const w2 = addWindow(b2); const id2=w2.dataset.winId; ensureVisible(w2);
   await typeFill(`[name="w_bez_${id2}"]`,'Fenster rechts', slow);
   await typeFill(`[name="w_breite_${id2}"]`,'900', slow);
   await typeFill(`[name="w_hoehe_${id2}"]`,'1200', slow);
-  w2.querySelector(`input[name="w_art_${id2}"][value="Festverglast"]`).checked = true; enhanceChoiceStyling(w2); await sleep(400);
+  await selectAndFlash(`input[name="w_art_${id2}"][value="Festverglast"]`, w2); await sleep(400);
 
-  const w3 = addWindow(b2); const id3=w3.dataset.winId;
+  const w3 = addWindow(b2); const id3=w3.dataset.winId; ensureVisible(w3);
   await typeFill(`[name="w_bez_${id3}"]`,'Fenster Balkontür', slow);
   await typeFill(`[name="w_breite_${id3}"]`,'1000', slow);
   await typeFill(`[name="w_hoehe_${id3}"]`,'2100', slow);
-  w3.querySelector(`input[name="w_art_${id3}"][value="Kipp"]`).checked = true; enhanceChoiceStyling(w3); await sleep(500);
+  await selectAndFlash(`input[name="w_art_${id3}"][value="Kipp"]`, w3); await sleep(500);
 
-  // PDF erstellen
-  flash(document.getElementById('submitButton')); await sleep(700);
-  await openPdfPreview();
+  ensureVisible(document.getElementById('submitButton')); await sleep(700);
+  await openPdfPreview(); // lädt in den bereits geöffneten Tab
 });
 
 function flash(el){ if(!el) return; el.classList.add('hl'); setTimeout(()=>el.classList.remove('hl'), 1000); }
-async function typeFill(selector, val, per=70){
+async function typeFill(selector, val, per=80){
   const el = document.querySelector(selector); if(!el) return;
+  ensureVisible(el);
   el.focus(); el.value='';
   for (let i=0;i<val.length;i++){ el.value += val[i]; await sleep(per); }
   el.blur();
   saveState();
 }
-function selectAndFlash(selector){
-  const el = document.querySelector(selector); if (!el) return;
+async function selectAndFlash(selector, scope=document){
+  const el = scope.querySelector(selector) || document.querySelector(selector);
+  if (!el) return;
   el.checked = true;
-  enhanceChoiceStyling(document); // refresh styles
-  flash(el.closest('.inline-radio-item') || el.closest('.inline-checkbox-item') || el);
+  enhanceChoiceStyling(scope);
+  const pill = el.closest('.inline-radio-item, .inline-checkbox-item') || el;
+  ensureVisible(pill);
+  pill.classList.add('bling'); setTimeout(()=>pill.classList.remove('bling'), 260);
+  await sleep(380);
 }
 
 // Submit / Drucken -> PDF
@@ -529,7 +563,7 @@ document.getElementById('printBtn')?.addEventListener('click', async ()=>{ await
 // PDF Hook – robustes Nachladen bei Bedarf
 async function ensurePdfLib(){
   if (window.PDFLib) return true;
-  try { await loadScript('vendor/pdf-lib.min.js?v=6'); if (window.PDFLib) return true; } catch {}
+  try { await loadScript('vendor/pdf-lib.min.js?v=7'); if (window.PDFLib) return true; } catch {}
   try { await loadScript('https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'); return !!window.PDFLib; } catch { return false; }
 }
 function loadScript(src){
@@ -539,7 +573,7 @@ async function openPdfPreview(){
   const ok = await ensurePdfLib();
   if (!ok) { alert('PDF-Bibliothek konnte nicht geladen werden. Bitte prüfen: /vendor/pdf-lib.min.js'); return; }
   const data = collectAllData();
-  await createPdfAndOpen(data);
+  await createPdfAndOpen(data); // nutzt ggf. window.__pdfTarget
 }
 function collectAllData(){
   const form = document.getElementById('aufmassForm');
