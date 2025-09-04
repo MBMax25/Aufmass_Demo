@@ -1,7 +1,7 @@
-const CACHE_NAME = 'aufmass-demo-shell-v4';
+const CACHE_NAME = 'aufmass-demo-shell-v5';
 const ASSETS = [
   'index.html','styles.css','app.js','pdf.js',
-  'vendor/pdf-lib.min.js',
+  'vendor/pdf-lib.min.js?v=5',
   'manifest.webmanifest',
   'assets/logo.svg','assets/logo@2x.png',
   'assets/icons/icon-192-maskable.png','assets/icons/icon-512-maskable.png',
