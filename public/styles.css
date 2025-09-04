@@ -24,10 +24,24 @@ body{
 .logo{height:26px; display:block} /* Logo etwas größer */
 .app-title{font-weight:700; letter-spacing:.2px}
 .header-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.demo-cta{position:relative; display:flex; align-items:center; gap:6px}
+
+/* Hint bubble (animiert) */
+.hint-bubble{
+  position:absolute; right:-8px; top:-12px;
+  transform:translateX(100%);
+  background:#111; color:#fff; padding:6px 10px; border-radius:999px; font-size:12px;
+  box-shadow:0 8px 24px rgba(0,0,0,.2);
+  animation:pulseGlow 1.4s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%{opacity:.4; transform:translateX(100%) scale(.98)}
+  50%{opacity:1; transform:translateX(100%) scale(1)}
+  100%{opacity:.4; transform:translateX(100%) scale(.98)}
+}
 
 /* Layout */
 .container{max-width:980px; margin:24px auto; padding:0 16px}
-.info-banner{margin:8px 0 16px; padding:10px 12px; border:1px solid var(--border); border-radius:12px; background:var(--surface); color:#1c1c1e; box-shadow:var(--shadow)}
 .form-wrapper{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow)}
 .legend-row{display:flex; align-items:center; justify-content:space-between; gap:12px}
 legend{font-weight:700; margin-bottom:8px}
@@ -40,19 +54,23 @@ input[type=text], input[type=email], select{
 }
 input:focus, select:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,122,255,.12)}
 .row-inline{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+
+/* Choice pills + Feedback */
 .inline-radio-item, .inline-checkbox-item{
   display:flex; align-items:center; gap:8px; padding:8px 12px; border:1px solid var(--border);
-  border-radius:12px; background:#fff; transition:box-shadow .2s, border-color .2s, background .2s;
+  border-radius:12px; background:#fff; transition:box-shadow .2s, border-color .2s, background .2s, transform .08s ease-out;
 }
 .inline-radio-item.is-checked,
 .inline-checkbox-item.is-checked{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,122,255,.12); background:#fff }
+.inline-radio-item.bling,
+.inline-checkbox-item.bling{ transform:scale(1.02); box-shadow:0 0 0 4px rgba(0,122,255,.22) }
 
 /* small bits */
 .section-divider{height:1px; background:var(--border); margin:12px 0}
 .add-btn{margin-top:12px}
 
 /* Buttons */
-.btn{padding:10px 14px; min-height:40px; border-radius:12px; border:1px solid var(--border); background:#fff; color:var(--text); cursor:pointer}
+.btn{padding:10px 14px; min-height:40px; border-radius:12px; border:1px solid var(--border); background:#fff; color:#111; cursor:pointer}
 .btn:hover{filter:brightness(0.98)}
 .btn-primary{background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600}
 .btn-secondary{background:#fff; border-color:var(--border)}
@@ -117,12 +135,14 @@ input:focus, select:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(
 .hl{outline:3px solid rgba(0,122,255,.3); border-radius:12px; transition:outline-color .2s}
 
 /* Mobile / iPhone optimiert */
+@media (max-width:600px){
+  .app-header{padding:10px 12px; align-items:flex-start}
+  .header-actions{gap:6px; width:100%; justify-content:flex-start}
+}
 @media (max-width:480px){
-  .app-header{padding:10px 12px}
   .container{padding:0 12px}
   label{flex-direction:column; align-items:stretch}
   label > span{width:auto; margin-bottom:4px}
   .row-inline{gap:8px}
   .btn{width:100%; max-width:100%}
-  .header-actions{gap:6px}
 }
