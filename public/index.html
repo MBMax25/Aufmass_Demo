@@ -30,25 +30,24 @@
     <div class="header-actions">
       <button id="connectionBadge" class="badge" type="button" title="Verbindungsstatus">Online</button>
       <button id="installBtn" class="btn btn-secondary" hidden>Installieren</button>
-      <button id="demoGuideBtn" class="btn btn-ghost" title="Geführte Demo starten">Demo starten</button>
+
+      <div class="demo-cta">
+        <button id="demoGuideBtn" class="btn btn-ghost" title="Geführte Demo starten">Demo starten</button>
+        <span id="demoHint" class="hint-bubble">👈 Demo ansehen</span>
+      </div>
+
       <button id="printBtn" class="btn btn-primary" title="PDF anzeigen">Drucken/Speichern</button>
     </div>
   </header>
 
   <main class="container">
-    <!-- Hinweis (CRM-Echtzeit) -->
-    <aside class="info-banner" role="note">
-      <strong>Hinweis:</strong> Kundendaten können in Echtzeit aus Ihrem vorhandenen CRM/ERP übernommen werden.
-      In dieser Demo erfolgt die Eingabe manuell bzw. über „Testdaten“.
-    </aside>
-
     <div class="form-wrapper">
       <form id="aufmassForm">
         <!-- Schritt 1: Kundendaten -->
         <fieldset id="kundendaten">
           <div class="legend-row">
             <legend>Kundendaten</legend>
-            <button id="fillDemoBtn" class="btn btn-primary" type="button">Testdaten</button>
+            <button id="fillDemoBtn" class="btn btn-primary" type="button" aria-pressed="false">Testdaten</button>
           </div>
 
           <label><span>Firma:</span><input type="text" id="firma" name="firma" placeholder="Firma" autocomplete="organization" /></label>
@@ -76,6 +75,12 @@
         <!-- Schritt 2: Auftragsdaten -->
         <fieldset id="auftragsdaten" style="display:none;">
           <legend>Auftragsdaten</legend>
+
+          <!-- CRM-Hinweis NUR HIER -->
+          <div class="note-card">
+            <strong>Hinweis:</strong> Kundendaten können in Echtzeit aus Ihrem vorhandenen CRM/ERP übernommen werden.
+            In dieser Demo erfolgt die Eingabe manuell bzw. über „Testdaten“.
+          </div>
 
           <div class="note-card">
             <strong>Hinweis:</strong> Alle zu erfassenden Daten, Maße und Produkteigenschaften
@@ -136,6 +141,7 @@
               </label>
               <label class="inline-checkbox-item"><input type="checkbox" /> Checkpoint</label>
               <label class="inline-radio-item"><input type="radio" name="wahltest" /> Auswahl</label>
+              <label style="flex:1;"><span>Freifeld:</span><input type="text" placeholder="Beliebiger Text" /></label>
             </div>
           </div>
 
@@ -185,7 +191,7 @@
   <noscript>Bitte JavaScript aktivieren – diese Demo benötigt JS.</noscript>
 
   <!-- pdf-lib lokal (mit Cache-Bust) -->
-  <script src="vendor/pdf-lib.min.js?v=6"></script>
+  <script src="vendor/pdf-lib.min.js?v=7"></script>
   <script src="app.js" defer></script>
   <script src="pdf.js" defer></script>
 </body>
